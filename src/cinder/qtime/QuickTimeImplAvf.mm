@@ -595,6 +595,8 @@ void MovieBase::loadAsset()
 {
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
+		mLoaded = true;
+		
 		NSError* error = nil;
 		AVKeyValueStatus status = [mAsset statusOfValueForKey:@"tracks" error:&error];
 		if( status == AVKeyValueStatusLoaded && ! error ) {
