@@ -24,6 +24,9 @@
 #include "cinder/Cinder.h"
 #include <AvailabilityMacros.h>
 
+#define VIDEO_ONLY true
+#define NUM_SEAMLESS_LOOPS 30
+
 // This path is used on iOS or Mac OS X 10.8+
 #if defined( CINDER_COCOA_TOUCH ) || ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) )
 
@@ -618,7 +621,29 @@ void MovieBase::loadAsset()
 		
 		// Create a new AVPlayerItem and make it our player's current item.
 		mPlayer = [[AVPlayer alloc] init];
-		mPlayerItem = [AVPlayerItem playerItemWithAsset:mAsset];
+		
+		if (VIDEO_ONLY) {
+			AVAssetTrack *videoTrack = [[mAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
+			CMTime videoDuration = mAsset.duration;
+			
+			AVMutableComposition *mutableComposition = [AVMutableComposition composition];
+			AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+			
+			// Create a new AVPlayerItem and make it our player's current item.
+			mPlayer = [[AVPlayer alloc] init];
+			mPlayer.volume = 0;
+			
+			for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
+				// Add seamless loops. One loop takes approximately 0.25 KB of memory.
+				[mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:CMTimeMultiply(videoDuration, i) error:nil];
+			}
+			AVComposition *immutableSnapshotOfMyComposition = [mutableComposition copy];
+			mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
+		}
+		else {
+			mPlayerItem = [AVPlayerItem playerItemWithAsset:mAsset];
+		}
+		
 		[mPlayer replaceCurrentItemWithPlayerItem:mPlayerItem];
 		
 		// setup PlayerItemVideoOutput --from which we will obtain direct texture access
