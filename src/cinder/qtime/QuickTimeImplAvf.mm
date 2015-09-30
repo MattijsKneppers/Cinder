@@ -892,6 +892,7 @@ MovieLoader::MovieLoader( const Url &url )
 	AVPlayerItem* playerItem = [[AVPlayerItem alloc] initWithURL:asset_url];
 	mPlayer = [[AVPlayer alloc] init];
 	[mPlayer replaceCurrentItemWithPlayerItem:playerItem];	// starts the downloading process
+	[playerItem release];
 }
 
 MovieLoader::~MovieLoader()
