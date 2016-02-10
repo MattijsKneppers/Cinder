@@ -105,6 +105,11 @@ void CameraUi::disconnect()
 	mWindow.reset();
 }
 
+bool CameraUi::isConnected() const
+{
+	return mWindow != nullptr;
+}
+
 signals::Signal<void()>& CameraUi::getSignalCameraChange()
 {
 	return mSignalCameraChange;
@@ -112,28 +117,37 @@ signals::Signal<void()>& CameraUi::getSignalCameraChange()
 
 void CameraUi::mouseDown( app::MouseEvent &event )
 {
+	if( ! mEnabled )
+		return;
+
 	mouseDown( event.getPos() );
 	event.setHandled();
 }
 
 void CameraUi::mouseUp( app::MouseEvent &event )
 {
+	if( ! mEnabled )
+		return;
+
 	mouseUp( event.getPos() );
 	event.setHandled();
 }
 
 void CameraUi::mouseWheel( app::MouseEvent &event )
 {
+	if( ! mEnabled )
+		return;
+
 	mouseWheel( event.getWheelIncrement() );
 	event.setHandled();
 }
 
-void CameraUi::mouseUp( const ivec2 &mousePos )
+void CameraUi::mouseUp( const vec2 &mousePos )
 {
 	mLastAction = ACTION_NONE;
 }
 
-void CameraUi::mouseDown( const ivec2 &mousePos )
+void CameraUi::mouseDown( const vec2 &mousePos )
 {
 	if( ! mCamera || ! mEnabled )
 		return;
@@ -146,6 +160,9 @@ void CameraUi::mouseDown( const ivec2 &mousePos )
 
 void CameraUi::mouseDrag( app::MouseEvent &event )
 {
+	if( ! mEnabled )
+		return;
+
 	bool isLeftDown = event.isLeftDown();
 	bool isMiddleDown = event.isMiddleDown() || event.isAltDown();
 	bool isRightDown = event.isRightDown() || event.isControlDown();
@@ -157,7 +174,7 @@ void CameraUi::mouseDrag( app::MouseEvent &event )
 	event.setHandled();
 }
 
-void CameraUi::mouseDrag( const ivec2 &mousePos, bool leftDown, bool middleDown, bool rightDown )
+void CameraUi::mouseDrag( const vec2 &mousePos, bool leftDown, bool middleDown, bool rightDown )
 {
 	if( ! mCamera || ! mEnabled )
 		return;
