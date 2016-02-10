@@ -283,7 +283,7 @@ float MovieBase::getCurrentTime() const
 	if( ! mPlayer )
 		return -1.0f;
 	
-	return CMTimeGetSeconds([mPlayer currentTime]);
+	return fmod(CMTimeGetSeconds([mPlayer currentTime]), mDuration);
 }
 
 void MovieBase::seekToTime( float seconds )
@@ -369,7 +369,7 @@ void MovieBase::setLoop( bool loop, bool palindrome )
 	mLoop = loop;
 	mPalindrome = (loop? palindrome: false);
 }
-
+	
 bool MovieBase::stepForward()
 {
 	if( ! mPlayerItem )
@@ -519,11 +519,16 @@ void MovieBase::init()
 	mHeight = -1;
 	mDuration = -1;
 	mFrameCount = -1;
+	videoOnly = false;
 }
 	
-void MovieBase::initFromUrl( const Url& url )
+void MovieBase::initFromUrl( const Url& url, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
+	seamlessLoop = false;
+
 	NSURL* asset_url = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
+	app::console() << "initFromUrl: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfUrlInvalidExc();
 	
@@ -537,9 +542,39 @@ void MovieBase::initFromUrl( const Url& url )
 	loadAsset();
 }
 
-void MovieBase::initFromPath( const fs::path& filePath )
+void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
+	seamlessLoop = false;
+	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
+	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
+	if( ! asset_url )
+		throw AvfPathInvalidExc();
+	
+	// Create the AVAsset
+	NSDictionary* asset_options = @{(id)AVURLAssetPreferPreciseDurationAndTimingKey: @(YES)};
+	mAsset = [[AVURLAsset alloc] initWithURL:asset_url options:asset_options];
+	
+	mResponder = new MovieResponder(this);
+	mPlayerDelegate = [[MovieDelegate alloc] initWithResponder:mResponder];
+	
+	loadAsset();
+	
+	// spin-wait until asset loading is completed
+	while( ! mAssetLoaded ) {
+	}
+}
+	
+void MovieBase::initFromPath( const fs::path& filePath, float loopStart, float loopEnd, bool _videoOnly )
+{
+	videoOnly = _videoOnly;
+	seamlessLoop = true;
+	seamlessLoopStart = loopStart;
+	seamlessLoopEnd = loopEnd;
+	
+	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
+	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfPathInvalidExc();
 	
@@ -557,8 +592,9 @@ void MovieBase::initFromPath( const fs::path& filePath )
 	}
 }
 
-void MovieBase::initFromLoader( const MovieLoader& loader )
+void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
 	if( ! loader.ownsMovie() )
 		return;
 	
@@ -593,6 +629,7 @@ void MovieBase::initFromLoader( const MovieLoader& loader )
 
 void MovieBase::loadAsset()
 {
+	app::console() << "loading asset" << std::endl;
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
 		mLoaded = true;
@@ -624,9 +661,12 @@ void MovieBase::loadAsset()
 		// Create a new AVPlayerItem and make it our player's current item.
 		mPlayer = [[AVPlayer alloc] init];
 		
-		if (VIDEO_ONLY) {
+		if (videoOnly && seamlessLoop) {
 			AVAssetTrack *videoTrack = [[mAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
 			CMTime videoDuration = mAsset.duration;
+			
+			CMTime loopStartTime = CMTimeMakeWithSeconds(seamlessLoopStart, videoDuration.timescale);
+			CMTime loopEndTime = CMTimeMakeWithSeconds(seamlessLoopEnd, videoDuration.timescale);
 			
 			AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 			AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];

@@ -107,34 +107,44 @@ void MovieGl::TextureCache::remove( GLuint texId )
 
 /////////////////////////////////////////////////////////////////////////////////
 // MovieGl
-MovieGl::MovieGl( const Url& url )
+MovieGl::MovieGl( const Url& url, bool videoOnly )
 #if defined( CINDER_COCOA_TOUCH )
 	: mVideoTextureRef( nullptr ), mVideoTextureCacheRef( nullptr )
 #else
 	: mTextureCache( new TextureCache() )
 #endif
 {
-	MovieBase::initFromUrl( url );
+	MovieBase::initFromUrl( url, videoOnly );
 }
 
-MovieGl::MovieGl( const fs::path& path )
+MovieGl::MovieGl( const fs::path& path, bool videoOnly )
 #if defined( CINDER_COCOA_TOUCH )
 	: mVideoTextureRef( nullptr ), mVideoTextureCacheRef( nullptr )
 #else
 	: mTextureCache( new TextureCache() )
 #endif
 {
-	MovieBase::initFromPath( path );
+	MovieBase::initFromPath( path, videoOnly );
 }
 	
-MovieGl::MovieGl( const MovieLoader &loader )
+MovieGl::MovieGl( const MovieLoader &loader, bool videoOnly )
 #if defined( CINDER_COCOA_TOUCH )
 	: mVideoTextureRef( nullptr ), mVideoTextureCacheRef( nullptr )
 #else
 	: mTextureCache( new TextureCache() )
 #endif
 {
-	MovieBase::initFromLoader( loader );
+	MovieBase::initFromLoader( loader, videoOnly );
+}
+	
+MovieGl::MovieGl( const fs::path& path, float loopStart, float loopEnd, bool videoOnly )
+#if defined( CINDER_COCOA_TOUCH )
+	: mVideoTextureRef( nullptr ), mVideoTextureCacheRef( nullptr )
+#else
+	: mTextureCache( new TextureCache() )
+#endif
+{
+	MovieBase::initFromPath( path, loopStart, loopEnd, videoOnly );
 }
 		
 MovieGl::~MovieGl()
