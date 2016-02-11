@@ -54,8 +54,8 @@ class MovieGl : public MovieBase {
 	static MovieGlRef create( const fs::path& path, bool videoOnly = false ) { return MovieGlRef( new MovieGl( path, videoOnly ) ); }
 	static MovieGlRef create( const MovieLoaderRef &loader, bool videoOnly = false ) { return MovieGlRef( new MovieGl( *loader, videoOnly ) ); }
 
-    static MovieGlRef createWithSeamlessLoop ( const fs::path& path, float loopStart, float loopEnd, bool videoOnly = false ) {
-        return MovieGlRef( new MovieGl( path, loopStart, loopEnd, videoOnly ) );
+    static MovieGlRef createWithSeamlessLoop ( const fs::path& path, float startMarker, float loopStart, float loopEnd, bool videoOnly = false ) {
+        return MovieGlRef( new MovieGl( path, startMarker, loopStart, loopEnd, videoOnly ) );
     }
 
 	//! Returns the gl::Texture representing the Movie's current frame, bound to the \c GL_TEXTURE_RECTANGLE_ARB target
@@ -66,7 +66,7 @@ class MovieGl : public MovieBase {
 	MovieGl( const fs::path& path, bool videoOnly = false );
 	MovieGl( const MovieLoader& loader, bool videoOnly = false );
 
-    MovieGl( const fs::path& path, float loopStart, float loopEnd, bool videoOnly = false );
+    MovieGl( const fs::path& path, float startMarker, float loopStart, float loopEnd, bool videoOnly = false );
     
 	NSDictionary*	avPlayerItemOutputDictionary() const override;
 	void			allocateVisualContext() override;
