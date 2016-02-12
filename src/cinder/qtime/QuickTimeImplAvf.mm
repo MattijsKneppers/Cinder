@@ -864,9 +864,11 @@ void MovieBase::removeObservers()
 	}
 }
 	
+	bool printSignals = false;
+	
 void MovieBase::playerReady()
 {
-	app::console() << "playerReady" << std::endl;
+	if (printSignals) app::console() << "playerReady" << std::endl;
 	mPlayable = true;
 	
 	mSignalReady.emit();
@@ -877,7 +879,7 @@ void MovieBase::playerReady()
 	
 void MovieBase::playerItemEnded()
 {
-	app::console() << "playerItemEnded" << std::endl;
+	if (printSignals) app::console() << "playerItemEnded" << std::endl;
 	
 	if( mPalindrome ) {
 		float rate = -[mPlayer rate];
@@ -894,20 +896,20 @@ void MovieBase::playerItemEnded()
 	
 void MovieBase::playerItemCancelled()
 {
-	app::console() << "playerItemCancelled" << std::endl;
+	if (printSignals) app::console() << "playerItemCancelled" << std::endl;
 	
 	mSignalCancelled.emit();
 }
 	
 void MovieBase::playerItemJumped()
 {
-	app::console() << "playerItemJumped" << std::endl;
+	if (printSignals) app::console() << "playerItemJumped" << std::endl;
 	mSignalJumped.emit();
 }
 
 void MovieBase::outputWasFlushed( AVPlayerItemOutput* output )
 {
-	app::console() << "outputWasFlushed" << std::endl;
+	if (printSignals) app::console() << "outputWasFlushed" << std::endl;
 	mSignalOutputWasFlushed.emit();
 }
 
