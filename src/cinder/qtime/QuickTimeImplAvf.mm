@@ -286,7 +286,11 @@ float MovieBase::getCurrentTime() const
 	
 	float time = CMTimeGetSeconds([mPlayer currentTime]);
 	if (seamlessLoop) {
-		return fmod(time, seamlessLoopEnd - seamlessLoopStart) + seamlessLoopStart;
+		if (time > seamlessLoopStart) {
+			time = fmod((time - seamlessLoopStart), (seamlessLoopEnd - seamlessLoopStart)) + seamlessLoopStart;
+		}
+		
+		return time;
 	}
 	else {
 		return fmod(time, mDuration);
@@ -298,9 +302,10 @@ void MovieBase::seekToTime( float seconds )
 	if( ! mPlayer )
 		return;
 	
-	if (seamlessLoop) {
-		seconds = seconds - seamlessLoopStart;
-	}
+//	this is only needed when seamless looping would start the crafted movie at startMarker instead of 0
+//	if (seamlessLoop) {
+//		seconds -= startMarker;
+//	}
 	
 //	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
 	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
@@ -683,8 +688,6 @@ void MovieBase::loadAsset()
 			
 			mPlayer.volume = 0;
 			
-			// TODO: do something with start marker that is *before* loop start
-			
 			if (seamlessLoop) {
 				CMTime startMarkerTime = CMTimeMakeWithSeconds(startMarker, videoDuration.timescale);
 				CMTime loopStartTime = CMTimeMakeWithSeconds(seamlessLoopStart, videoDuration.timescale);
@@ -692,23 +695,27 @@ void MovieBase::loadAsset()
 				
 				app::console() << "Loading seamless loop with loop points " << seamlessLoopStart << ", " << seamlessLoopEnd << std::endl;
 				
+				// First add one segment from 0 to loop end
 				NSError *err;
+				bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,loopEndTime) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
+				if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+				
 				for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
-					// Add seamless loops. One loop takes approximately 0.25 KB of memory.
-					CMTime offset = CMTimeMultiply(CMTimeSubtract(loopEndTime, loopStartTime), i);
-					app::console() << "Adding segment of loop from: " << seamlessLoopStart << " to " << seamlessLoopEnd << " starting at " << CMTimeGetSeconds(offset) << std::endl;
-					bool success = (![mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(loopStartTime,loopEndTime) ofTrack:videoTrack atTime:offset error:&err]);
-					if (!success) {
-						app::console() << "Adding segment of time failed: " << err << std::endl;
-					}
+					// Then add segments from loop start to loop end.
+					float offset = (seamlessLoopEnd - seamlessLoopStart) * i + seamlessLoopEnd;
+					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
+					app::console() << "Adding segment of loop from: " << seamlessLoopStart << " to " << seamlessLoopEnd << " starting at " << offset << std::endl;
+					NSError *err;
+					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(loopStartTime,loopEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
+					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
 				}
+				// Each loop takes approximately 0.25 KB of RAM.
 			}
 			else {
+				// add full video track once.
 				NSError *err;
-				bool success = (![mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err]);
-				if (!success) {
-					app::console() << "Adding video track failed: " << err << std::endl;
-				}
+				bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
+				if (!success) app::console() << "Adding video track failed: " << err << std::endl;
 			}
 			AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
 			mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
