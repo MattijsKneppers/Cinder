@@ -674,15 +674,9 @@ void MovieBase::loadAsset()
 		// Create a new AVPlayerItem and make it our player's current item.
 		mPlayer = [[AVPlayer alloc] init];
 		
-		if (videoOnly && seamlessLoop) {
+		if (videoOnly) {
 			AVAssetTrack *videoTrack = [[mAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
 			CMTime videoDuration = mAsset.duration;
-			
-			CMTime startMarkerTime = CMTimeMakeWithSeconds(startMarker, videoDuration.timescale);
-			CMTime loopStartTime = CMTimeMakeWithSeconds(seamlessLoopStart, videoDuration.timescale);
-			CMTime loopEndTime = CMTimeMakeWithSeconds(seamlessLoopEnd, videoDuration.timescale);
-			
-//			app::console() << "Loading seamless loop with loop points " << seamlessLoopStart << ", " << seamlessLoopEnd << std::endl;
 			
 			AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 			AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
@@ -691,11 +685,30 @@ void MovieBase::loadAsset()
 			
 			// TODO: do something with start marker that is *before* loop start
 			
-			for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
-				// Add seamless loops. One loop takes approximately 0.25 KB of memory.
-				CMTime offset = CMTimeMultiply(CMTimeSubtract(loopEndTime, loopStartTime), i);
-//				app::console() << "Sdding segment of loop from: " << seamlessLoopStart << " to " << seamlessLoopEnd << " starting at " << CMTimeGetSeconds(offset) << std::endl;
-				[mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(loopStartTime,loopEndTime) ofTrack:videoTrack atTime:offset error:nil];
+			if (seamlessLoop) {
+				CMTime startMarkerTime = CMTimeMakeWithSeconds(startMarker, videoDuration.timescale);
+				CMTime loopStartTime = CMTimeMakeWithSeconds(seamlessLoopStart, videoDuration.timescale);
+				CMTime loopEndTime = CMTimeMakeWithSeconds(seamlessLoopEnd, videoDuration.timescale);
+				
+				app::console() << "Loading seamless loop with loop points " << seamlessLoopStart << ", " << seamlessLoopEnd << std::endl;
+				
+				NSError *err;
+				for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
+					// Add seamless loops. One loop takes approximately 0.25 KB of memory.
+					CMTime offset = CMTimeMultiply(CMTimeSubtract(loopEndTime, loopStartTime), i);
+					app::console() << "Adding segment of loop from: " << seamlessLoopStart << " to " << seamlessLoopEnd << " starting at " << CMTimeGetSeconds(offset) << std::endl;
+					bool success = (![mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(loopStartTime,loopEndTime) ofTrack:videoTrack atTime:offset error:&err]);
+					if (!success) {
+						app::console() << "Adding segment of time failed: " << err << std::endl;
+					}
+				}
+			}
+			else {
+				NSError *err;
+				bool success = (![mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err]);
+				if (!success) {
+					app::console() << "Adding video track failed: " << err << std::endl;
+				}
 			}
 			AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
 			mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
@@ -846,7 +859,7 @@ void MovieBase::removeObservers()
 	
 void MovieBase::playerReady()
 {
-//	app::console() << "playerReady" << std::endl;
+	app::console() << "playerReady" << std::endl;
 	mPlayable = true;
 	
 	mSignalReady.emit();
@@ -857,7 +870,7 @@ void MovieBase::playerReady()
 	
 void MovieBase::playerItemEnded()
 {
-//	app::console() << "playerItemEnded" << std::endl;
+	app::console() << "playerItemEnded" << std::endl;
 	
 	if( mPalindrome ) {
 		float rate = -[mPlayer rate];
@@ -874,20 +887,20 @@ void MovieBase::playerItemEnded()
 	
 void MovieBase::playerItemCancelled()
 {
-//	app::console() << "playerItemCancelled" << std::endl;
+	app::console() << "playerItemCancelled" << std::endl;
 	
 	mSignalCancelled.emit();
 }
 	
 void MovieBase::playerItemJumped()
 {
-//	app::console() << "playerItemJumped" << std::endl;
+	app::console() << "playerItemJumped" << std::endl;
 	mSignalJumped.emit();
 }
 
 void MovieBase::outputWasFlushed( AVPlayerItemOutput* output )
 {
-//	app::console() << "outputWasFlushed" << std::endl;
+	app::console() << "outputWasFlushed" << std::endl;
 	mSignalOutputWasFlushed.emit();
 }
 
