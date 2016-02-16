@@ -137,14 +137,14 @@ MovieGl::MovieGl( const MovieLoader &loader, bool videoOnly )
 	MovieBase::initFromLoader( loader, videoOnly );
 }
 	
-MovieGl::MovieGl( const fs::path& path, float startMarker, float loopStart, float loopEnd, bool videoOnly )
+MovieGl::MovieGl( const fs::path& path, std::vector<std::pair<float, float>> segments, bool videoOnly )
 #if defined( CINDER_COCOA_TOUCH )
 	: mVideoTextureRef( nullptr ), mVideoTextureCacheRef( nullptr )
 #else
 	: mTextureCache( new TextureCache() )
 #endif
 {
-	MovieBase::initFromPath( path, startMarker, loopStart, loopEnd, videoOnly );
+	MovieBase::initFromPath( path, segments, videoOnly );
 }
 		
 MovieGl::~MovieGl()

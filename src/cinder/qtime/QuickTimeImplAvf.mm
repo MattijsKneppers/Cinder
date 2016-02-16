@@ -25,7 +25,6 @@
 #include <AvailabilityMacros.h>
 
 #define VIDEO_ONLY true
-#define NUM_SEAMLESS_LOOPS 30
 
 // This path is used on iOS or Mac OS X 10.8+
 #if defined( CINDER_COCOA_TOUCH ) || ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) )
@@ -196,6 +195,7 @@ MovieBase::MovieBase()
 
 MovieBase::~MovieBase()
 {
+//	app::console() << "destructing movie" << std::endl;
 	// remove all observers
 	removeObservers();
 	
@@ -270,6 +270,7 @@ int32_t MovieBase::getNumFrames()
 
 bool MovieBase::checkNewFrame()
 {
+//	app::console() << "has new frame? at " << CMTimeGetSeconds([mPlayer currentTime]) << std::endl;
 	if( ! mPlayer || ! mPlayerVideoOutput )
 		return false;
 	
@@ -284,28 +285,13 @@ float MovieBase::getCurrentTime() const
 	if( ! mPlayer )
 		return -1.0f;
 	
-	float time = CMTimeGetSeconds([mPlayer currentTime]);
-	if (seamlessLoop) {
-		if (time > seamlessLoopStart) {
-			time = fmod((time - seamlessLoopStart), (seamlessLoopEnd - seamlessLoopStart)) + seamlessLoopStart;
-		}
-		
-		return time;
-	}
-	else {
-		return fmod(time, mDuration);
-	}
+	return CMTimeGetSeconds([mPlayer currentTime]);
 }
 
 void MovieBase::seekToTime( float seconds )
 {
 	if( ! mPlayer )
 		return;
-	
-//	this is only needed when seamless looping would start the crafted movie at startMarker instead of 0
-//	if (seamlessLoop) {
-//		seconds -= startMarker;
-//	}
 	
 //	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
 	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
@@ -542,7 +528,7 @@ void MovieBase::init()
 void MovieBase::initFromUrl( const Url& url, bool _videoOnly )
 {
 	videoOnly = _videoOnly;
-	seamlessLoop = false;
+	seamlessSegments = false;
 
 	NSURL* asset_url = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
 	app::console() << "initFromUrl: " << asset_url.path.UTF8String << std::endl;
@@ -562,7 +548,7 @@ void MovieBase::initFromUrl( const Url& url, bool _videoOnly )
 void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 {
 	videoOnly = _videoOnly;
-	seamlessLoop = false;
+	seamlessSegments = false;
 	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
 	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
@@ -583,12 +569,11 @@ void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 	}
 }
 	
-void MovieBase::initFromPath( const fs::path& filePath, float startMarker, float loopStart, float loopEnd, bool _videoOnly )
+	void MovieBase::initFromPath( const fs::path& filePath, std::vector<std::pair<float, float>> _segments, bool _videoOnly )
 {
 	videoOnly = _videoOnly;
-	seamlessLoop = true;
-	seamlessLoopStart = loopStart;
-	seamlessLoopEnd = loopEnd;
+	seamlessSegments = true;
+	segments = _segments;
 	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
 	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
@@ -646,7 +631,7 @@ void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 
 void MovieBase::loadAsset()
 {
-	app::console() << "loading asset. video only is " << (videoOnly ? "on" : "off")  << ", seamless loop is " << (seamlessLoop ? "on" : "off") << std::endl;
+//	app::console() << "loading asset. video only is " << (videoOnly ? "on" : "off")  << ", seamless segments is " << (seamlessSegments ? "on" : "off") << std::endl;
 	
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
@@ -688,26 +673,22 @@ void MovieBase::loadAsset()
 			
 			mPlayer.volume = 0;
 			
-			if (seamlessLoop) {
-				CMTime startMarkerTime = CMTimeMakeWithSeconds(startMarker, videoDuration.timescale);
-				CMTime loopStartTime = CMTimeMakeWithSeconds(seamlessLoopStart, videoDuration.timescale);
-				CMTime loopEndTime = CMTimeMakeWithSeconds(seamlessLoopEnd, videoDuration.timescale);
+			if (seamlessSegments) {
 				
-				app::console() << "Loading seamless loop with loop points " << seamlessLoopStart << ", " << seamlessLoopEnd << std::endl;
-				
-				// First add one segment from 0 to loop end
-				NSError *err;
-				bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,loopEndTime) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
-				if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
-				
-				for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
-					// Then add segments from loop start to loop end.
-					float offset = (seamlessLoopEnd - seamlessLoopStart) * i + seamlessLoopEnd;
+				float offset = 0;
+				for (auto segment : segments) {
+					CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
+					CMTime segmentEndTime = CMTimeMakeWithSeconds(segment.second, videoDuration.timescale);
+					
 					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
-					app::console() << "Adding segment of loop from: " << seamlessLoopStart << " to " << seamlessLoopEnd << " starting at " << offset << std::endl;
+
+					// Then add segments from loop start to loop end.
+					app::console() << "Adding segment from " << segment.first << " to " << segment.second << " starting at " << offset << std::endl;
 					NSError *err;
-					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(loopStartTime,loopEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
+					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
 					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+					
+					offset += segment.second - segment.first;
 				}
 				// Each loop takes approximately 0.25 KB of RAM.
 			}

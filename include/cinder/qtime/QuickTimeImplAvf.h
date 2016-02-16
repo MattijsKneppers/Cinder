@@ -168,7 +168,7 @@ class MovieBase {
 	void initFromPath( const fs::path& filePath, bool videoOnly = false );
 	void initFromLoader( const MovieLoader& loader, bool videoOnly = false );
 
-	void initFromPath( const fs::path& filePath, float startMarker, float loopStart, float loopEnd, bool videoOnly = false );
+	void initFromPath( const fs::path& filePath, std::vector<std::pair<float, float>> _segments, bool _videoOnly = false );
 
 	void loadAsset();
 	void updateFrame();
@@ -199,11 +199,8 @@ class MovieBase {
 	bool						mPlaying;	// required to auto-start the movie
 	
 	bool						videoOnly = false;
-	
-	bool						seamlessLoop = false;
-    float                       startMarker = 0;
-	float						seamlessLoopStart = 0;
-	float						seamlessLoopEnd = 0;
+	bool						seamlessSegments = false;
+	std::vector<std::pair<float, float>> segments;
 	
 	AVPlayer*					mPlayer;
 	AVPlayerItem*				mPlayerItem;
