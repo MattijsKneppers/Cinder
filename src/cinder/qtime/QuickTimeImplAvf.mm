@@ -25,7 +25,6 @@
 #include <AvailabilityMacros.h>
 
 #define VIDEO_ONLY true
-#define NUM_SEAMLESS_LOOPS 30
 
 // This path is used on iOS or Mac OS X 10.8+
 #if defined( CINDER_COCOA_TOUCH ) || ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) )
@@ -124,13 +123,14 @@ static void* AVPlayerItemStatusContext = &AVPlayerItemStatusContext;
 		AVPlayerItemStatus status = [player_item status];
 		switch (status) {
 			case AVPlayerItemStatusUnknown:
-				//ci::app::console() << "AVPlayerItemStatusUnknown" << std::endl;
+//				ci::app::console() << "AVPlayerItemStatusUnknown" << std::endl;
 				break;
 			case AVPlayerItemStatusReadyToPlay:
+//				ci::app::console() << "AVPlayerItemStatusReadyToPlay" << std::endl;
 				[self playerReady];
 				break;
 			case AVPlayerItemStatusFailed:
-				//ci::app::console() << "AVPlayerItemStatusFailed" << std::endl;
+//				ci::app::console() << "AVPlayerItemStatusFailed" << std::endl;
 				break;
 		}
 	}
@@ -195,6 +195,7 @@ MovieBase::MovieBase()
 
 MovieBase::~MovieBase()
 {
+//	app::console() << "destructing movie" << std::endl;
 	// remove all observers
 	removeObservers();
 	
@@ -269,6 +270,7 @@ int32_t MovieBase::getNumFrames()
 
 bool MovieBase::checkNewFrame()
 {
+//	app::console() << "has new frame? at " << CMTimeGetSeconds([mPlayer currentTime]) << std::endl;
 	if( ! mPlayer || ! mPlayerVideoOutput )
 		return false;
 	
@@ -291,6 +293,7 @@ void MovieBase::seekToTime( float seconds )
 	if( ! mPlayer )
 		return;
 	
+//	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
 	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
 	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
 }
@@ -369,7 +372,7 @@ void MovieBase::setLoop( bool loop, bool palindrome )
 	mLoop = loop;
 	mPalindrome = (loop? palindrome: false);
 }
-
+	
 bool MovieBase::stepForward()
 {
 	if( ! mPlayerItem )
@@ -519,11 +522,16 @@ void MovieBase::init()
 	mHeight = -1;
 	mDuration = -1;
 	mFrameCount = -1;
+	videoOnly = false;
 }
 	
-void MovieBase::initFromUrl( const Url& url )
+void MovieBase::initFromUrl( const Url& url, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
+	seamlessSegments = false;
+
 	NSURL* asset_url = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
+	app::console() << "initFromUrl: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfUrlInvalidExc();
 	
@@ -537,9 +545,38 @@ void MovieBase::initFromUrl( const Url& url )
 	loadAsset();
 }
 
-void MovieBase::initFromPath( const fs::path& filePath )
+void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
+	seamlessSegments = false;
+	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
+	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
+	if( ! asset_url )
+		throw AvfPathInvalidExc();
+	
+	// Create the AVAsset
+	NSDictionary* asset_options = @{(id)AVURLAssetPreferPreciseDurationAndTimingKey: @(YES)};
+	mAsset = [[AVURLAsset alloc] initWithURL:asset_url options:asset_options];
+	
+	mResponder = new MovieResponder(this);
+	mPlayerDelegate = [[MovieDelegate alloc] initWithResponder:mResponder];
+	
+	loadAsset();
+	
+	// spin-wait until asset loading is completed
+	while( ! mAssetLoaded ) {
+	}
+}
+	
+	void MovieBase::initFromPath( const fs::path& filePath, std::vector<std::pair<float, float>> _segments, bool _videoOnly )
+{
+	videoOnly = _videoOnly;
+	seamlessSegments = true;
+	segments = _segments;
+	
+	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
+	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfPathInvalidExc();
 	
@@ -557,8 +594,9 @@ void MovieBase::initFromPath( const fs::path& filePath )
 	}
 }
 
-void MovieBase::initFromLoader( const MovieLoader& loader )
+void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 {
+	videoOnly = _videoOnly;
 	if( ! loader.ownsMovie() )
 		return;
 	
@@ -593,6 +631,8 @@ void MovieBase::initFromLoader( const MovieLoader& loader )
 
 void MovieBase::loadAsset()
 {
+//	app::console() << "loading asset. video only is " << (videoOnly ? "on" : "off")  << ", seamless segments is " << (seamlessSegments ? "on" : "off") << std::endl;
+	
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
 		mLoaded = true;
@@ -612,7 +652,7 @@ void MovieBase::loadAsset()
 		error = nil;
 		status = [mAsset statusOfValueForKey:@"playable" error:&error];
 		if( status == AVKeyValueStatusLoaded && ! error ) {
-			mPlayable = [mAsset isPlayable];
+//			mPlayable = [mAsset isPlayable];
 		}
 		
 		error = nil;
@@ -624,22 +664,41 @@ void MovieBase::loadAsset()
 		// Create a new AVPlayerItem and make it our player's current item.
 		mPlayer = [[AVPlayer alloc] init];
 		
-		if (VIDEO_ONLY) {
+		if (videoOnly) {
 			AVAssetTrack *videoTrack = [[mAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
 			CMTime videoDuration = mAsset.duration;
 			
 			AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 			AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
 			
-			// Create a new AVPlayerItem and make it our player's current item.
-			mPlayer = [[AVPlayer alloc] init];
 			mPlayer.volume = 0;
 			
-			for (int i = 0; i < NUM_SEAMLESS_LOOPS + 1; i++) {
-				// Add seamless loops. One loop takes approximately 0.25 KB of memory.
-				[mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:CMTimeMultiply(videoDuration, i) error:nil];
+			if (seamlessSegments) {
+				
+				float offset = 0;
+				for (auto segment : segments) {
+					CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
+					CMTime segmentEndTime = CMTimeMakeWithSeconds(segment.second, videoDuration.timescale);
+					
+					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
+
+					// Then add segments from loop start to loop end.
+					app::console() << "Adding segment from " << segment.first << " to " << segment.second << " starting at " << offset << std::endl;
+					NSError *err;
+					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
+					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+					
+					offset += segment.second - segment.first;
+				}
+				// Each loop takes approximately 0.25 KB of RAM.
 			}
-			AVComposition *immutableSnapshotOfMyComposition = [mutableComposition copy];
+			else {
+				// add full video track once.
+				NSError *err;
+				bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
+				if (!success) app::console() << "Adding video track failed: " << err << std::endl;
+			}
+			AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
 			mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
 		}
 		else {
@@ -711,17 +770,19 @@ void MovieBase::processAssetTracks( AVAsset* asset )
 			throw AvfFileInvalidExc();
 	}
 	
+	if (!videoOnly) {
 	// process audio tracks
 	NSArray* audioTracks = [asset tracksWithMediaType:AVMediaTypeAudio];
-	mHasAudio = [audioTracks count] > 0;
+		mHasAudio = [audioTracks count] > 0;
 #if defined( CINDER_COCOA_TOUCH )
-	if( mHasAudio ) {
-		setAudioSessionModes();
-	}
+		if( mHasAudio ) {
+			setAudioSessionModes();
+		}
 #elif defined( CINDER_COCOA )
-	// No need for changes on OSX
+		// No need for changes on OSX
 	
 #endif
+	}
 }
 
 void MovieBase::createPlayerItemOutput( const AVPlayerItem* playerItem )
@@ -784,8 +845,13 @@ void MovieBase::removeObservers()
 	}
 }
 	
+	bool printSignals = false;
+	
 void MovieBase::playerReady()
 {
+	if (printSignals) app::console() << "playerReady" << std::endl;
+	mPlayable = true;
+	
 	mSignalReady.emit();
 	
 	if( mPlaying )
@@ -794,6 +860,8 @@ void MovieBase::playerReady()
 	
 void MovieBase::playerItemEnded()
 {
+	if (printSignals) app::console() << "playerItemEnded" << std::endl;
+	
 	if( mPalindrome ) {
 		float rate = -[mPlayer rate];
 		mPlayingForward = (rate >= 0);
@@ -809,16 +877,20 @@ void MovieBase::playerItemEnded()
 	
 void MovieBase::playerItemCancelled()
 {
+	if (printSignals) app::console() << "playerItemCancelled" << std::endl;
+	
 	mSignalCancelled.emit();
 }
 	
 void MovieBase::playerItemJumped()
 {
+	if (printSignals) app::console() << "playerItemJumped" << std::endl;
 	mSignalJumped.emit();
 }
 
 void MovieBase::outputWasFlushed( AVPlayerItemOutput* output )
 {
+	if (printSignals) app::console() << "outputWasFlushed" << std::endl;
 	mSignalOutputWasFlushed.emit();
 }
 

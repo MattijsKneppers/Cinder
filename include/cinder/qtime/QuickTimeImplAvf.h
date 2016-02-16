@@ -126,6 +126,7 @@ class MovieBase {
 
 	//! Sets whether the movie is set to loop during playback. If \a palindrome is true, the movie will "ping-pong" back and forth
 	void		setLoop( bool loop = true, bool palindrome = false );
+	
 	//! Advances the movie by one frame (a single video sample). Ignores looping settings.
 	bool		stepForward();
 	//! Steps backward by one frame (a single video sample). Ignores looping settings.
@@ -163,10 +164,12 @@ class MovieBase {
  protected:
 	MovieBase();
 	void init();
-	void initFromUrl( const Url& url );
-	void initFromPath( const fs::path& filePath );
-	void initFromLoader( const MovieLoader& loader );
-	
+	void initFromUrl( const Url& url, bool videoOnly = false );
+	void initFromPath( const fs::path& filePath, bool videoOnly = false );
+	void initFromLoader( const MovieLoader& loader, bool videoOnly = false );
+
+	void initFromPath( const fs::path& filePath, std::vector<std::pair<float, float>> _segments, bool _videoOnly = false );
+
 	void loadAsset();
 	void updateFrame();
 	uint32_t countFrames() const;
@@ -194,6 +197,10 @@ class MovieBase {
 	bool						mPlayingForward, mLoop, mPalindrome;
 	bool						mHasAudio, mHasVideo;
 	bool						mPlaying;	// required to auto-start the movie
+	
+	bool						videoOnly = false;
+	bool						seamlessSegments = false;
+	std::vector<std::pair<float, float>> segments;
 	
 	AVPlayer*					mPlayer;
 	AVPlayerItem*				mPlayerItem;

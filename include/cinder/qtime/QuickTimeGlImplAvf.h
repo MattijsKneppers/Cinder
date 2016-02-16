@@ -50,18 +50,24 @@ class MovieGl : public MovieBase {
   public:
 	virtual ~MovieGl();
 	
-	static MovieGlRef create( const Url& url ) { return MovieGlRef( new MovieGl( url ) ); }
-	static MovieGlRef create( const fs::path& path ) { return MovieGlRef( new MovieGl( path ) ); }
-	static MovieGlRef create( const MovieLoaderRef &loader ) { return MovieGlRef( new MovieGl( *loader ) ); }
-	
+	static MovieGlRef create( const Url& url, bool videoOnly = false ) { return MovieGlRef( new MovieGl( url, videoOnly ) ); }
+	static MovieGlRef create( const fs::path& path, bool videoOnly = false ) { return MovieGlRef( new MovieGl( path, videoOnly ) ); }
+	static MovieGlRef create( const MovieLoaderRef &loader, bool videoOnly = false ) { return MovieGlRef( new MovieGl( *loader, videoOnly ) ); }
+
+    static MovieGlRef createWithLoopedSegments ( const fs::path& path, std::vector<std::pair<float, float>> segments, bool videoOnly = false ) {
+        return MovieGlRef( new MovieGl( path, segments, videoOnly ) );
+    }
+
 	//! Returns the gl::Texture representing the Movie's current frame, bound to the \c GL_TEXTURE_RECTANGLE_ARB target
 	gl::TextureRef	getTexture();
 	
   protected:
-	MovieGl( const Url& url );
-	MovieGl( const fs::path& path );
-	MovieGl( const MovieLoader& loader );
-	
+	MovieGl( const Url& url, bool videoOnly = false );
+	MovieGl( const fs::path& path, bool videoOnly = false );
+	MovieGl( const MovieLoader& loader, bool videoOnly = false );
+
+    MovieGl( const fs::path& path, std::vector<std::pair<float, float>> segments, bool videoOnly = false );
+    
 	NSDictionary*	avPlayerItemOutputDictionary() const override;
 	void			allocateVisualContext() override;
 	void			deallocateVisualContext() override;
