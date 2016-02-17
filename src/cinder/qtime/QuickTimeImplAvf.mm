@@ -531,7 +531,6 @@ void MovieBase::initFromUrl( const Url& url, bool _videoOnly )
 	seamlessSegments = false;
 
 	NSURL* asset_url = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
-	app::console() << "initFromUrl: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfUrlInvalidExc();
 	
@@ -551,7 +550,6 @@ void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 	seamlessSegments = false;
 	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
-	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfPathInvalidExc();
 	
@@ -576,7 +574,6 @@ void MovieBase::initFromPath( const fs::path& filePath, bool _videoOnly )
 	segments = _segments;
 	
 	NSURL* asset_url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:filePath.c_str()]];
-	app::console() << "initFromPath: " << asset_url.path.UTF8String << std::endl;
 	if( ! asset_url )
 		throw AvfPathInvalidExc();
 	
@@ -683,10 +680,14 @@ void MovieBase::loadAsset()
 					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
 
 					// Then add segments from loop start to loop end.
-					app::console() << "Adding segment from " << segment.first << " to " << segment.second << " starting at " << offset << std::endl;
+//					app::console() << "Adding segment from " << segment.first << " to " << segment.second << " starting at " << offset << std::endl;
 					NSError *err;
 					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
 					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+					
+//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
+					// BUG IN AVF?? duration of mutable composition increases with full duration of original track of inserted segment! :(
+					// this means that playerItemEnded will not fire when we are out of loops..
 					
 					offset += segment.second - segment.first;
 				}
