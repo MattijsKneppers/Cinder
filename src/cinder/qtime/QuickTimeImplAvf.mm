@@ -675,19 +675,17 @@ void MovieBase::loadAsset()
 				float offset = 0;
 				for (auto segment : segments) {
 					CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
-					CMTime segmentEndTime = CMTimeMakeWithSeconds(segment.second, videoDuration.timescale);
+					CMTime segmentDuration = CMTimeMakeWithSeconds(segment.second - segment.first, videoDuration.timescale);
 					
 					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
 
 					// Then add segments from loop start to loop end.
-//					app::console() << "Adding segment from " << segment.first << " to " << segment.second << " starting at " << offset << std::endl;
+//					app::console() << "Adding segment from " << segment.first << " of duration " << (segment.second - segment.first) << " starting at " << offset << std::endl;
 					NSError *err;
-					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentEndTime) ofTrack:videoTrack atTime:offsetTime error:&err];
+					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
 					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
 					
 //					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
-					// BUG IN AVF?? duration of mutable composition increases with full duration of original track of inserted segment! :(
-					// this means that playerItemEnded will not fire when we are out of loops..
 					
 					offset += segment.second - segment.first;
 				}
