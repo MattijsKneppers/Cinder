@@ -373,6 +373,10 @@ void MovieBase::setLoop( bool loop, bool palindrome )
 	mPalindrome = (loop? palindrome: false);
 }
 	
+bool MovieBase::getLoop() {
+	return mLoop;
+}
+	
 bool MovieBase::stepForward()
 {
 	if( ! mPlayerItem )

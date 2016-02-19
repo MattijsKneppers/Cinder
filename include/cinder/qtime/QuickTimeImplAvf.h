@@ -126,6 +126,7 @@ class MovieBase {
 
 	//! Sets whether the movie is set to loop during playback. If \a palindrome is true, the movie will "ping-pong" back and forth
 	void		setLoop( bool loop = true, bool palindrome = false );
+    bool		getLoop();
 	
 	//! Advances the movie by one frame (a single video sample). Ignores looping settings.
 	bool		stepForward();
