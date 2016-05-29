@@ -636,89 +636,98 @@ void MovieBase::loadAsset()
 	
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
-		mLoaded = true;
-		
-		NSError* error = nil;
-		AVKeyValueStatus status = [mAsset statusOfValueForKey:@"tracks" error:&error];
-		if( status == AVKeyValueStatusLoaded && ! error ) {
-			processAssetTracks( mAsset );
-		}
-		
-		error = nil;
-		status = [mAsset statusOfValueForKey:@"duration" error:&error];
-		if( status == AVKeyValueStatusLoaded && ! error ) {
-			mDuration = (float) CMTimeGetSeconds([mAsset duration]);
-		}
-		
-		error = nil;
-		status = [mAsset statusOfValueForKey:@"playable" error:&error];
-		if( status == AVKeyValueStatusLoaded && ! error ) {
-//			mPlayable = [mAsset isPlayable];
-		}
-		
-		error = nil;
-		status = [mAsset statusOfValueForKey:@"hasProtectedContent" error:&error];
-		if( status == AVKeyValueStatusLoaded && ! error ) {
-			mProtected = [mAsset hasProtectedContent];
-		}
-		
-		// Create a new AVPlayerItem and make it our player's current item.
-		mPlayer = [[AVPlayer alloc] init];
 		
 		if (videoOnly) {
-			AVAssetTrack *videoTrack = [[mAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
-			CMTime videoDuration = mAsset.duration;
-			
-			AVMutableComposition *mutableComposition = [AVMutableComposition composition];
-			AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
-			
-			mPlayer.volume = 0;
-			
-			if (seamlessSegments) {
+			NSArray<AVAssetTrack *> *videoTracks = [mAsset tracksWithMediaType:AVMediaTypeVideo];
+			if (videoTracks.count > 0) {
+				AVAssetTrack *videoTrack = [videoTracks objectAtIndex:0];
+				CMTime videoDuration = mAsset.duration;
 				
-				float offset = 0;
-				for (auto segment : segments) {
-					CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
-					CMTime segmentDuration = CMTimeMakeWithSeconds(segment.second - segment.first, videoDuration.timescale);
+				AVMutableComposition *mutableComposition = [AVMutableComposition composition];
+				AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+				
+				if (seamlessSegments) {
 					
-					CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
+					float offset = 0;
+					for (auto segment : segments) {
+						CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
+						CMTime segmentDuration = CMTimeMakeWithSeconds(segment.second - segment.first, videoDuration.timescale);
+						
+						CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
 
-					// Then add segments from loop start to loop end.
-//					app::console() << "Adding segment from " << segment.first << " of duration " << (segment.second - segment.first) << " starting at " << offset << std::endl;
-					NSError *err;
-					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
-					if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
-					
-//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
-					
-					offset += segment.second - segment.first;
+						// Then add segments from loop start to loop end.
+	//					app::console() << "Adding segment from " << segment.first << " of duration " << (segment.second - segment.first) << " starting at " << offset << std::endl;
+						NSError *err;
+						bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
+						if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+						
+	//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
+						
+						offset += segment.second - segment.first;
+					}
+					// Each loop takes approximately 0.25 KB of RAM.
 				}
-				// Each loop takes approximately 0.25 KB of RAM.
+				else {
+					// add full video track once.
+					NSError *err;
+					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
+					if (!success) app::console() << "Adding video track failed: " << err << std::endl;
+				}
+				AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
+				mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
+				mLoaded = true;
 			}
 			else {
-				// add full video track once.
-				NSError *err;
-				bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
-				if (!success) app::console() << "Adding video track failed: " << err << std::endl;
+				app::console() << "Loading video failed: no video track available" << std::endl;
+				mLoaded = false;
 			}
-			AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
-			mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
 		}
 		else {
 			mPlayerItem = [AVPlayerItem playerItemWithAsset:mAsset];
+			mLoaded = true;
 		}
 		
-		[mPlayer replaceCurrentItemWithPlayerItem:mPlayerItem];
-		
-		// setup PlayerItemVideoOutput --from which we will obtain direct texture access
-		createPlayerItemOutput( mPlayerItem );
-		
-		// without this the player continues to move the playhead past the asset duration time...
-		[mPlayer setActionAtItemEnd:AVPlayerActionAtItemEndPause];
-		
-		addObservers();
-		
-		allocateVisualContext();
+		if (mLoaded) {
+			// Create a new AVPlayerItem
+			mPlayer = [[AVPlayer alloc] init];
+			if (videoOnly) mPlayer.volume = 0;
+			
+			NSError* error = nil;
+			AVKeyValueStatus status = [mAsset statusOfValueForKey:@"tracks" error:&error];
+			if( status == AVKeyValueStatusLoaded && ! error ) {
+				processAssetTracks( mAsset );
+			}
+			
+			error = nil;
+			status = [mAsset statusOfValueForKey:@"duration" error:&error];
+			if( status == AVKeyValueStatusLoaded && ! error ) {
+				mDuration = (float) CMTimeGetSeconds([mAsset duration]);
+			}
+			
+			error = nil;
+			status = [mAsset statusOfValueForKey:@"playable" error:&error];
+			if( status == AVKeyValueStatusLoaded && ! error ) {
+				mPlayable = [mAsset isPlayable];
+			}
+			
+			error = nil;
+			status = [mAsset statusOfValueForKey:@"hasProtectedContent" error:&error];
+			if ( status == AVKeyValueStatusLoaded && ! error ) {
+				mProtected = [mAsset hasProtectedContent];
+			}
+			
+			[mPlayer replaceCurrentItemWithPlayerItem:mPlayerItem];
+			
+			// setup PlayerItemVideoOutput --from which we will obtain direct texture access
+			createPlayerItemOutput( mPlayerItem );
+			
+			// without this the player continues to move the playhead past the asset duration time...
+			[mPlayer setActionAtItemEnd:AVPlayerActionAtItemEndPause];
+			
+			addObservers();
+			
+			allocateVisualContext();
+		}
 	
 		mAssetLoaded = true;
 	}];
