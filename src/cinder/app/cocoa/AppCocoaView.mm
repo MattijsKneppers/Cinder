@@ -453,6 +453,7 @@ using namespace cinder::app;
 											   repeats:YES];
 	[[NSRunLoop currentRunLoop] addTimer:mAnimationTimer forMode:NSDefaultRunLoopMode];
 	[[NSRunLoop currentRunLoop] addTimer:mAnimationTimer forMode:NSEventTrackingRunLoopMode];
+	[[NSRunLoop currentRunLoop] addTimer:mAnimationTimer forMode:NSRunLoopCommonModes];
 }
 
 - (void)timerFired:(NSTimer *)t
