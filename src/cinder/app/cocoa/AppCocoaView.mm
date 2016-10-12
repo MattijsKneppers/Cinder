@@ -225,11 +225,16 @@ using namespace cinder::app;
 
 - (void)setSize:(cinder::ivec2)size
 {
-	mSize = size;
-	NSSize newSize;
-	newSize.width = mSize.x;
-	newSize.height = mSize.y;
-	[mCinderView setFrameSize:newSize];
+	// this compensates for the Mac wanting to resize from the lower-left corner
+	ivec2 sizeDelta = size - mSize;
+	NSRect r = [[mCinderView window] frame];
+	r.size.width += sizeDelta.x;
+	r.size.height += sizeDelta.y;
+	r.origin.y -= sizeDelta.y;
+	[[mCinderView window] setFrame:r display:YES];
+	
+	mSize.x = (int)mCinderView.frame.size.width;
+	mSize.y = (int)mCinderView.frame.size.height;
 }
 
 - (NSString *)getTitle
@@ -281,11 +286,15 @@ using namespace cinder::app;
 
 - (void)setPos:(cinder::ivec2)pos
 {
+	NSPoint p;
+	p.x = pos.x;
+	p.y = cinder::Display::getMainDisplay()->getHeight() - pos.y;
 	mPos = pos;
-	NSRect frame = [mCinderView frame];
-	frame.origin.x = mPos.x;
-	frame.origin.y = mPos.y;
-	[mCinderView setFrame:frame];
+	NSRect currentContentRect = [[mCinderView window] contentRectForFrameRect:[[mCinderView window] frame]];
+	NSRect targetContentRect = NSMakeRect( p.x, p.y - currentContentRect.size.height, currentContentRect.size.width, currentContentRect.size.height);
+	NSRect targetFrameRect = [[mCinderView window] frameRectForContentRect:targetContentRect];
+	[[mCinderView window] setFrameOrigin:targetFrameRect.origin];
+	
 }
 
 - (float)getContentScale
