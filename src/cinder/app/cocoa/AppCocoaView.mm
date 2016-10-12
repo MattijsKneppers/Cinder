@@ -244,11 +244,12 @@ using namespace cinder::app;
 
 - (bool)isBorderless
 {
-	return [[mCinderView window] styleMask] == NSBorderlessWindowMask;
+	return [(id)[mCinderView window] borderless]; // send to our own NSWindow
 }
 
 - (void)setBorderless:(bool)borderless
-{ // NO-OP
+{
+	[(id)[mCinderView window] setBorderless:borderless]; // send to our own NSWindow
 }
 
 - (bool)isAlwaysOnTop
