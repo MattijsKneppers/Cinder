@@ -232,10 +232,7 @@ using namespace cinder::app;
 	r.size.height += sizeDelta.y;
 	r.origin.y -= sizeDelta.y;
 	[[mCinderView window] setFrame:r display:YES];
-	[mCinderView setFrameSize:r.size];
-	
-	mSize.x = (int)mCinderView.frame.size.width;
-	mSize.y = (int)mCinderView.frame.size.height;
+	[self resize];
 }
 
 - (NSString *)getTitle
