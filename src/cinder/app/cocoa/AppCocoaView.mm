@@ -215,7 +215,7 @@ using namespace cinder::app;
 
 - (void)setFullScreen:(bool)fullScreen options:(const cinder::app::FullScreenOptions *)options
 {
-	[mCinderView setFullScreen:fullScreen options:options];
+	[[mCinderView window] setFullscreen:fullScreen];
 }
 
 - (cinder::ivec2)getSize
