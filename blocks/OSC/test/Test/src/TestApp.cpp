@@ -3,15 +3,25 @@
 #include "cinder/gl/gl.h"
 #include "cinder/Log.h"
 
-#include "Osc.h"
+#include "cinder/osc/Osc.h"
 
 using namespace ci;
 using namespace ci::app;
 using namespace std;
 
-#define TEST_UDP 0
+#define TEST_UDP 1
 
 #define USE_SLIP_PACKET_FRAMING 1
+
+#if TEST_UDP
+using Receiver = osc::ReceiverUdp;
+using Sender = osc::SenderUdp;
+using protocol = asio::ip::udp;
+#else
+using Receiver = osc::ReceiverTcp;
+using Sender = osc::SenderTcp;
+using protocol = asio::ip::tcp;
+#endif
 
 struct TestStruct {
 	int myInt;
@@ -23,24 +33,22 @@ class TestApp : public App {
   public:
 	TestApp();
 	void update() override;
+	void cleanup() override;
 	
-#if TEST_UDP
-	void sendMessageUdp( const osc::Message &message );
-	osc::ReceiverUdp	mReceiver;
-	osc::SenderUdp		mSender;
-#else
-	void sendMessageTcp( const osc::Message &message );
+	void setupUdp();
+	void setupTcp();
 	
-	osc::PacketFramingRef mPacketFraming;
+	void constructMessageA();
+	void constructMessageB();
 	
-	osc::ReceiverTcp	mReceiver;
-	osc::SenderTcp		mSender;
-#endif
-	osc::Message		mMessage;
+	osc::PacketFramingRef	mPacketFraming;
+	Receiver				mReceiver;
+	Sender					mSender;
+	osc::Message			mMessage;
     /// For testing variadic templated functions
-    osc::Message        mMessage2;
+    osc::Message			mMessage2;
 	
-	bool mIsConnected = false;
+	bool mIsConnected = false, mShouldSendMessageA = false, mShouldSendMessageB = false;
 };
 
 TestApp::TestApp()
@@ -51,19 +59,23 @@ TestApp::TestApp()
 #if USE_SLIP_PACKET_FRAMING
 	mPacketFraming( new osc::SLIPPacketFraming ),
 #endif
-	mReceiver( 10000, mPacketFraming ), mSender( 12345, "127.0.0.1", 10000, mPacketFraming )
+	mReceiver( 10000, protocol::v4(), io_service(), mPacketFraming ),
+	mSender( 12345, "127.0.0.1", 10000, protocol::v4(), io_service(), mPacketFraming )
 #endif
-{	
-	mReceiver.bind();
-	mReceiver.listen();
+{
+//	log::manager()->makeLogger<log::LoggerBreakpoint>();
+	
+#if TEST_UDP
+	setupUdp();
+#else
+	setupTcp();
+#endif
+	
 	mReceiver.setListener( "/app/?",
 	[]( const osc::Message &message ){
 		cout << "Integer: " << message[0].int32() << endl;
+		cout << "Received From: " << message.getSenderIpAddress() << endl;
 	} );
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "String: " << message[1].string() << endl;
-	});
 	mReceiver.setListener( "/app/*",
 	[]( const osc::Message &message ) {
 		auto blob0 = message[2].blob();
@@ -78,30 +90,6 @@ TestApp::TestApp()
 		"\tint: " << myStruct1.myInt << endl <<
 		"\tfloat: " << myStruct1.myFloat << endl <<
 		"\tdouble: " << myStruct1.myDouble << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Character: " << message[4].character() << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Midi: " << message << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Int64: " << message[6].int64() << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Float: " << message[7].flt() << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Double: " << message[8].dbl() << endl;
-	});
-	mReceiver.setListener( "/app/?",
-	[]( const osc::Message &message ) {
-		cout << "Boolean: " << message[9].boolean() << endl;
 	});
 	mReceiver.setListener( "/app/10",
 	[&]( const osc::Message &message ) {
@@ -137,60 +125,200 @@ TestApp::TestApp()
         auto messagesTheSame = (mMessage2 == message);
         cout << "Message2 the same: " << std::boolalpha << messagesTheSame << endl;
     });
+	gl::clear();
+	
+	constructMessageA();
+	constructMessageB();
+}
+
+void TestApp::setupUdp()
+{
+#if TEST_UDP
+	try{
+		mReceiver.bind();
+	}
+	catch( const osc::Exception &ex ) {
+		CI_LOG_EXCEPTION("Receiver Bind: ", ex);
+		quit();
+	}
+	
+	mReceiver.listen(
+	[]( const asio::error_code &error, const asio::ip::udp::endpoint &originator ) -> bool {
+		// Decide whether we want to keep listening, is this an originator error or our socket's
+		// error. Return false to make the socket stop listenings
+		if( error ) {
+			CI_LOG_E("Error: " << error.message() << ", val: " << error.value()
+					<< ", originator: " << originator.address().to_string() );
+			return false;
+		}
+		else
+			return true;
+	});
+	
+	try{
+		mSender.bind();
+		mIsConnected = true;
+		mShouldSendMessageA = true;
+		mShouldSendMessageB = true;
+	}
+	catch( const osc::Exception &ex ) {
+		CI_LOG_EXCEPTION("Sender bind: ", ex);
+		quit();
+	}
+#endif
+}
+
+void TestApp::setupTcp()
+{
+#if ! TEST_UDP
+	try{
+		mReceiver.bind();
+	}
+	catch( const osc::Exception &ex ) {
+		CI_LOG_EXCEPTION("Receiver Bind: ", ex);
+		quit();
+	}
+	
+	auto socketTransportErrorFn = [&]( asio::error_code error, uint64_t identifier ) {
+		if( error ) {
+			CI_LOG_E( "Acceptor Error: " << error.message()
+					 << " - Val: " << error.value()
+					 << " -- endpoint: " << identifier );
+		}
+	};
+	
+	mReceiver.setSocketTransportErrorFn( socketTransportErrorFn );
+	
+	auto onAcceptFn = [&]( osc::TcpSocketRef socket, uint64_t identifier ) -> bool {
+		// Decide whether this connection is correct and return whether
+		// the socket should be cached and read from
+		bool shouldAccept = true;
+		if( shouldAccept )
+			return true;
+		else
+			return false;
+	};
+	
+	auto onAcceptErrorFn = [&]( asio::error_code error, osc::ReceiverTcp::protocol::endpoint endpoint ) -> bool {
+		// if it's decided that the error can't be recovered from, stop
+		// accepting by returning false. otherwise do the fix and return
+		// true. possible fix could be closing and rebinding the acceptor
+		if( error ) {
+			CI_LOG_E( "Acceptor Error: " << error.message()
+					 << " - Val: " << error.value()
+					 << " -- endpoint: " << endpoint );
+			return false;
+		}
+		else
+			return true;
+	};
+	
+	mReceiver.accept( onAcceptErrorFn, onAcceptFn );
+	
+	try{
+		mSender.bind();
+	}
+	catch( const osc::Exception &ex ) {
+		CI_LOG_EXCEPTION("Sender bind: ", ex);
+		quit();
+	}
+	
+	mSender.connect(
+	[&]( asio::error_code error ){
+		if( ! error ) {
+			mIsConnected = true;
+			mShouldSendMessageA = true;
+			mShouldSendMessageB = true;
+		}
+		else
+			CI_LOG_E( "error: " << error.message() << ", val: " << error.value() );
+	});
+#endif
+}
+
+void TestApp::constructMessageA()
+{
+	static int i = 245;
+	i++;
+	static std::string test("testing");
+	test += ".";
+	static TestStruct mTransmitStruct{ 0, 0, 0 };
+	mTransmitStruct.myInt += 45;
+	mTransmitStruct.myFloat += 32.4f;
+	mTransmitStruct.myDouble += 128.09;
+	
+	osc::Message message( "/app/10" );
+	message.append( i );
+	message.append( test );
+	
+	auto buffer = ci::Buffer::create( &mTransmitStruct, sizeof(TestStruct) );
+	message.append( *buffer );
+	mTransmitStruct.myInt += 33;
+	mTransmitStruct.myFloat += 45.4f;
+	mTransmitStruct.myDouble += 1.01;
+	message.appendBlob( &mTransmitStruct, sizeof(TestStruct) );
+	
+	message.append( 'X' );
+	message.appendMidi( 10, 20, 30, 40 );
+	message.append( int64_t( 1000000000000 ) );
+	message.append( 1.4f );
+	message.append( 28.4 );
+	message.append( true );
+	
+	auto onErrorFn = [&]( asio::error_code error ) {
+		if( error ) {
+			CI_LOG_E( "error: " << error.message() << ", val: " << error.value() );
+			quit();
+		}
+		else
+			constructMessageA();
+	};
+	
+	auto onCompleteFn = [&]() {
+		mShouldSendMessageA = true;
+	};
+	
+	mSender.send( message, onErrorFn, onCompleteFn );
+	mMessage = std::move( message );
+	mShouldSendMessageA = false;
+}
+
+void TestApp::constructMessageB()
+{
+	auto onErrorFn = [&]( asio::error_code error ) {
+		if( error ) {
+			CI_LOG_E( "error: " << error.message() << ", val: " << error.value() );
+			quit();
+		}
+	};
+	
+	auto onCompleteFn = [&]() {
+		mShouldSendMessageB = true;
+	};
+	const char* something = "Something";
+	mMessage2 = osc::Message( "/message2" ) << 3 << 4 << 2.0 << 3.0f << "string literal" << something;
+	mSender.send( mMessage2, onErrorFn, onCompleteFn );
+	mShouldSendMessageB = false;
 }
 
 void TestApp::update()
 {
-	if( ! mIsConnected ) {
-		mSender.bind();
-#if ! TEST_UDP
-		mSender.connect();
-#endif
-		mIsConnected = true;
+	if( mIsConnected ) {
+		if( mShouldSendMessageA )
+			constructMessageA();
+		if( mShouldSendMessageB )
+			constructMessageB();
 	}
-	else {
-		
-		static int i = 245;
-		i++;
-		static std::string test("testing");
-		test += ".";
-		static TestStruct mTransmitStruct{ 0, 0, 0 };
-		mTransmitStruct.myInt += 45;
-		mTransmitStruct.myFloat += 32.4f;
-		mTransmitStruct.myDouble += 128.09;
-		
-		osc::Message message( "/app/10" );
-		message.append( i );
-		message.append( test );
-		
-		auto buffer = ci::Buffer::create( &mTransmitStruct, sizeof(TestStruct) );
-		message.append( *buffer );
-		mTransmitStruct.myInt += 33;
-		mTransmitStruct.myFloat += 45.4f;
-		mTransmitStruct.myDouble += 1.01;
-		message.appendBlob( &mTransmitStruct, sizeof(TestStruct) );
-		
-		message.append( 'X' );
-		message.appendMidi( 10, 20, 30, 40 );
-		message.append( int64_t( 1000000000000 ) );
-		message.append( 1.4f );
-		message.append( 28.4 );
-		message.append( true );
-		
-		mSender.send( message );
-		
-		mMessage = std::move( message );
-//		cout << mMessage << endl;
-        
-        {
-			const char* something = "Something";
-			mMessage2 = osc::Message( "/message2" ) << 3 << 4 << 2.0 << 3.0f << "string literal" << something;
-			cout << "As constructed: " << mMessage2 << endl;
-            mSender.send(mMessage2);
-        }
-	}
-	
 	gl::clear();
+}
+
+void TestApp::cleanup()
+{
+#if ! TEST_UDP
+	mSender.shutdown();
+#endif
+	mReceiver.close();
+	mSender.close();
 }
 
 #if defined( CINDER_MSW )

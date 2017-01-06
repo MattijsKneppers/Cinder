@@ -13,13 +13,19 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Blocks">
-      <UniqueIdentifier>{28822488-E445-474B-8425-9BDDF59E5BA9}</UniqueIdentifier>
+      <UniqueIdentifier>{C2CCFB82-919F-4B59-8B3C-04ABE8D838EC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\OSC">
-      <UniqueIdentifier>{6B1188E3-BE64-419B-B432-773F83A24ED6}</UniqueIdentifier>
+      <UniqueIdentifier>{A041ECC6-C666-464F-A190-7057E59B9EE6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Blocks\OSC\src">
-      <UniqueIdentifier>{65F19D52-69E6-439E-8683-FFC9FEB0B359}</UniqueIdentifier>
+      <UniqueIdentifier>{7E4625AE-5B92-44E1-8AE1-23BF3768AE66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Blocks\OSC\src\cinder">
+      <UniqueIdentifier>{D0E852A1-09DD-4D01-A08B-DE6874DB49E7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Blocks\OSC\src\cinder\osc">
+      <UniqueIdentifier>{8192D870-E43A-43B3-A3D7-996AE454014C}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -32,11 +38,11 @@
     <ClInclude Include="..\include\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClCompile Include="..\..\..\src\Osc.cpp">
-      <Filter>Blocks\OSC\src</Filter>
+    <ClCompile Include="..\..\..\src\cinder\osc\Osc.cpp">
+      <Filter>Blocks\OSC\src\cinder\osc</Filter>
     </ClCompile>
-    <ClInclude Include="..\..\..\src\Osc.h">
-      <Filter>Blocks\OSC\src</Filter>
+    <ClInclude Include="..\..\..\src\cinder\osc\Osc.h">
+      <Filter>Blocks\OSC\src\cinder\osc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

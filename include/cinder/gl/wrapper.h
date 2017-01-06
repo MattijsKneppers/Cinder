@@ -76,7 +76,13 @@ void checkError();
 bool isExtensionAvailable( const std::string &extName );
 //! Returns the OpenGL version number as a pair<major,minor>
 std::pair<GLint,GLint>	getVersion();
+//! Returns a string describing the active GL context.
+std::string getString( GLenum name );
+//! Returns a string representing the active GL context's version or release number.
 std::string getVersionString();
+//! Returns a string representing the company responsible for this GL implementation.
+std::string getVendorString();
+
 
 GlslProgRef& getStockShader( const class ShaderDef &shader );
 void bindStockShader( const class ShaderDef &shader );
@@ -249,8 +255,10 @@ void pauseTransformFeedback();
 // Tesselation
 //! Specifies the parameters that will be used for patch primitives. Analogous to glPatchParameteri().
 void patchParameteri( GLenum pname, GLint value );
+#if ! defined( CINDER_GL_ES )
 //! Specifies the parameters that will be used for patch primitives. Analogous to glPatchParameterfv().
 void patchParameterfv( GLenum pname, GLfloat *value );
+#endif
 #endif
 	
 void color( float r, float g, float b );
@@ -338,9 +346,9 @@ void	drawBuffer( GLenum dst );
 void	readPixels( GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *data );
 
 // Compute
-#if defined( CINDER_MSW ) && ! defined( CINDER_GL_ANGLE )
+#if defined( CINDER_GL_HAS_COMPUTE_SHADER )
 //! Launches one or more compute work groups. Analogous to glDispatchCompute(). 
-inline void	dispatchCompute( GLuint numGroupsX, GLuint numGroupsY, GLuint numGroupsZ ) { glDispatchCompute( numGroupsX, numGroupsY, numGroupsZ ); }
+inline void	dispatchCompute( GLuint numGroupsX, GLuint numGroupsY = 1, GLuint numGroupsZ = 1 ) { glDispatchCompute( numGroupsX, numGroupsY, numGroupsZ ); }
 //! Defines a barrier ordering memory transactions. Analogous to glMemoryBarrier().
 inline void	memoryBarrier( GLbitfield barriers ) { glMemoryBarrier( barriers ); }
 

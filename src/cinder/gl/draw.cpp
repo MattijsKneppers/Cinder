@@ -63,6 +63,18 @@ void drawElements( GLenum mode, GLsizei count, GLenum type, const GLvoid *indice
 	context()->drawElements( mode, count, type, indices );
 }
 
+#if defined( CINDER_GL_HAS_MULTI_DRAW )
+void multiDrawArrays( GLenum mode, GLint *first, GLsizei *count, GLsizei primcount )
+{
+	context()->multiDrawArrays( mode, first, count, primcount );
+}
+
+void multiDrawElements( GLenum mode, GLsizei *count, GLenum type, const GLvoid * const *indices, GLsizei primcount )
+{
+	context()->multiDrawElements( mode, count, type, indices, primcount );
+}
+#endif // defined( CINDER_GL_HAS_MULTI_DRAW )
+
 #if defined( CINDER_GL_HAS_DRAW_INSTANCED )
 void drawArraysInstanced( GLenum mode, GLint first, GLsizei count, GLsizei instanceCount )
 {
@@ -74,6 +86,30 @@ void drawElementsInstanced( GLenum mode, GLsizei count, GLenum type, const GLvoi
 	context()->drawElementsInstanced( mode, count, type, indices, instanceCount );
 }
 #endif // defined( CINDER_GL_HAS_DRAW_INSTANCED )
+
+#if defined( CINDER_GL_HAS_DRAW_INDIRECT )
+void drawArraysIndirect( GLenum mode, const GLvoid *indirect )
+{
+	context()->drawArraysIndirect( mode, indirect );
+}
+
+void drawElementsIndirect( GLenum mode, GLenum type, const GLvoid *indirect )
+{
+	context()->drawElementsIndirect( mode, type, indirect );
+}
+#endif // defined( CINDER_GL_HAS_DRAW_INDIRECT )
+
+#if defined( CINDER_GL_HAS_MULTI_DRAW_INDIRECT )
+void multiDrawArraysIndirect( GLenum mode, const GLvoid *indirect, GLsizei drawcount, GLsizei stride )
+{
+	context()->multiDrawArraysIndirect( mode, indirect, drawcount, stride );
+}
+
+void multiDrawElementsIndirect( GLenum mode, GLenum type, const GLvoid *indirect, GLsizei drawcount, GLsizei stride )
+{
+	context()->multiDrawElementsIndirect( mode, type, indirect, drawcount, stride );
+}
+#endif // defined( CINDER_GL_HAS_MULTI_DRAW_INDIRECT )
 
 namespace {
 
@@ -324,7 +360,7 @@ void draw( const Path2d &path, float approximationScale )
 void draw( const Shape2d &shape, float approximationScale )
 {
 	for( const auto &path : shape.getContours() )
-		gl::draw( path );
+		gl::draw( path, approximationScale );
 }
 
 void draw( const PolyLine2 &polyLine )
@@ -544,7 +580,7 @@ class DefaultVboTarget : public geom::Target {
 			return;
 
 		mIndexType = GL_UNSIGNED_INT;
-		mElementVbo->bufferSubData( 0, numIndices * requiredBytesPerIndex, sourceData );
+		mElementVbo->bufferSubData( 0, numIndices * 4, sourceData );
 	}
 
 	const geom::Source*		mSource;
@@ -690,6 +726,9 @@ void drawEquirectangular( const gl::TextureCubeMapRef &texture, const Rectf &rec
 	glsl->uniform( "uCubeMapTex", 0 );
 	if( useLod )
 		glsl->uniform( "uLod", lod );
+
+	 gl::ScopedTextureBind scTex( texture );
+
 	drawSolidRect( rect, vec2( 0, 1 ), vec2( 1, 0 ) );
 }
 
@@ -1441,6 +1480,8 @@ void drawVector( const vec3& start, const vec3& end, float headLength, float hea
 namespace {
 void drawStringHelper( const std::string &str, const vec2 &pos, const ColorA &color, Font font, int justification )
 {
+#if ! defined( CINDER_ANDROID )
+	
 	if( str.empty() )
 		return;
 
@@ -1468,6 +1509,8 @@ void drawStringHelper( const std::string &str, const vec2 &pos, const ColorA &co
 		draw( tex, pos - vec2( tex->getWidth() * 0.5f, baselineOffset ) );
 	else // right
 		draw( tex, pos - vec2( (float)tex->getWidth(), baselineOffset ) );
+
+#endif // ! defined( CINDER_ANDROID )
 }
 } // anonymous namespace
 

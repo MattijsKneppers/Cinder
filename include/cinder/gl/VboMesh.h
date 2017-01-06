@@ -111,6 +111,11 @@ class VboMesh {
 	//! Returns the VBO containing the indices of the mesh, or a NULL for non-indexed geometry
 	VboRef		getIndexVbo() { return mIndices; }
 
+	//! Updates internal vertex count to reflect an external change to underlying VBOs. Does NOT reallocate or modify storage.
+	void		updateNumVertices( uint32_t numVertices ) { mNumVertices = numVertices; }
+	//! Updates internal index count to reflect an external change to underlying VBOs. Does NOT reallocate or modify storage.
+	void		updateNumIndices( uint32_t numIndices ) { mNumIndices = numIndices; }
+
 	//! Builds and returns a vector of VboRefs for the vertex data of the mesh
 	std::vector<VboRef>									getVertexArrayVbos();
 	//! Returns the vector of pairs of (BufferLayout,VboRef) for the vertex data of the mesh
@@ -244,6 +249,10 @@ class VboMesh {
 #if defined( CINDER_GL_HAS_DRAW_INSTANCED )
 	//! Issues a glDraw*Instanced call, but without binding a VAO or sending shader vars. Consider gl::draw( VboMeshRef ) instead. Knows whether to call glDrawArrays or glDrawElements
 	void		drawInstancedImpl( GLsizei instanceCount );
+#endif
+#if defined( CINDER_GL_HAS_DRAW_INDIRECT )
+	//! Issues a glDraw*Indirect call, but without binding a VAO or sending shader vars. Knows whether to call glDrawArrays of glDrawElements
+	void		drawIndirectImpl( const GLvoid *indirect );
 #endif
 
 #if ! defined( CINDER_GL_ES )
