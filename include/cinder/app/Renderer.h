@@ -27,7 +27,7 @@
 #include "cinder/Cinder.h"
 #include "cinder/Exception.h"
 
-#if defined( CINDER_WINRT )
+#if defined( CINDER_UWP )
 	#include <agile.h>
 	#undef min
 	#undef max
@@ -58,6 +58,10 @@
 		class RendererImpl2dCocoaTouchQuartz;
 		class UIView;
 	#endif
+#elif defined( CINDER_ANDROID )
+	struct ANativeWindow;
+#elif defined( CINDER_LINUX )
+	typedef struct GLFWwindow 	GLFWwindow;	
 #endif
 
 
@@ -86,9 +90,9 @@ class Renderer {
 	#endif
 	virtual CGContextRef	getCgContext() { throw; } // the default behavior is failure
 
-	virtual void	setFrameSize( int width, int height ) {}		
+	virtual void	setFrameSize( int /*width*/, int /*height*/ ) {}
 
-#elif defined( CINDER_MSW )
+#elif defined( CINDER_MSW_DESKTOP )
 	virtual void setup( HWND wnd, HDC dc, RendererRef sharedRenderer ) = 0;
 
 	virtual void prepareToggleFullScreen() {}
@@ -97,15 +101,19 @@ class Renderer {
 
 	virtual HWND				getHwnd() = 0;
 	virtual HDC					getDc() { return NULL; }
-#elif defined( CINDER_WINRT )
+#elif defined( CINDER_UWP )
 	virtual void setup( ::Platform::Agile<Windows::UI::Core::CoreWindow> wnd, RendererRef sharedRenderer ) = 0;
+#elif defined( CINDER_ANDROID )
+	virtual void setup( ANativeWindow *nativeWindow, RendererRef sharedRenderer ) = 0;	
+#elif defined( CINDER_LINUX )
+	virtual void	setup( void* nativeWindow, RendererRef sharedRenderer ) = 0;
 #endif
 
 	virtual Surface8u		copyWindowSurface( const Area &area, int32_t windowHeightPixels ) = 0;
 
 	virtual void startDraw() {}
 	virtual void finishDraw() {}
-	virtual void makeCurrentContext( bool force = false ) {}
+	virtual void makeCurrentContext( bool /*force*/ = false ) {}
 	virtual void swapBuffers() {}
 	virtual void defaultResize() {}
 
@@ -138,7 +146,7 @@ class Renderer2d : public Renderer {
 	void			makeCurrentContext( bool force = false ) override;
 	void			setFrameSize( int width, int height ) override;
 	Surface8u		copyWindowSurface( const Area &area, int32_t windowHeightPixels ) override;
-	
+
   protected:
 	Renderer2d( const Renderer2d &renderer );
 
@@ -150,7 +158,7 @@ class Renderer2d : public Renderer {
 	CGContextRef					mCGContext;
 };
 
-#elif defined( CINDER_MSW )
+#elif defined( CINDER_MSW_DESKTOP )
 
 class Renderer2d : public Renderer {
  public:
@@ -181,6 +189,18 @@ class Renderer2d : public Renderer {
 	bool			mDoubleBuffer, mPaintEvents;
 	HWND			mWnd;
 	HDC				mDC;
+};
+
+#elif defined( CINDER_ANDROID )
+
+class Renderer2d : public Renderer {
+ public:
+    Renderer2d();
+
+ protected:
+	Renderer2d( const Renderer2d &renderer );
+    
+    class ApplImplAndroidRenderer2d *mImpl;
 };
 
 #endif

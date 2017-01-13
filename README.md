@@ -17,4 +17,4 @@ Cinder supports OS X, Windows and iOS. It requires Xcode 5.1.1 or later for deve
 
 Cinder is released under the [Modified BSD License](docs/COPYING). Please visit [our website](https://libcinder.org) for more information.
 
-Also be sure to check the [User Forum](http://forum.libcinder.org/#AllForums).
+Also be sure to check the [User Forum](http://discourse.libcinder.org).

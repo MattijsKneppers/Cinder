@@ -33,7 +33,7 @@ using namespace std;
 namespace cinder { namespace audio {
 
 // ----------------------------------------------------------------------------------------------------
-// MARK: - OutputNode
+// OutputNode
 // ----------------------------------------------------------------------------------------------------
 
 OutputNode::OutputNode( const Format &format )
@@ -77,17 +77,26 @@ bool OutputNode::checkNotClipping()
 }
 
 // ----------------------------------------------------------------------------------------------------
-// MARK: - OutputDeviceNode
+// OutputDeviceNode
 // ----------------------------------------------------------------------------------------------------
 
 OutputDeviceNode::OutputDeviceNode( const DeviceRef &device, const Format &format )
 	: OutputNode( format ), mDevice( device )
 {
-	CI_ASSERT( mDevice );
+	if( ! mDevice ) {
+		string errorMsg = "Empty DeviceRef.";
+		if( ! audio::Device::getDefaultOutput() )
+			errorMsg += " Also, no default output Device so perhaps there is no available hardware output.";
+
+		throw AudioDeviceExc( errorMsg );
+	}
 
 	// listen to the notifications sent by device property changes in order to update the audio graph.
 	mWillChangeConn = mDevice->getSignalParamsWillChange().connect( bind( &OutputDeviceNode::deviceParamsWillChange, this ) );
 	mDidChangeConn = mDevice->getSignalParamsDidChange().connect( bind( &OutputDeviceNode::deviceParamsDidChange, this ) );
+
+	mInterruptionBeganConn = Context::deviceManager()->getSignalInterruptionBegan().connect( [this] { disable(); } );
+	mInterruptionEndedConn = Context::deviceManager()->getSignalInterruptionEnded().connect( [this] { enable(); } );
 
 	size_t deviceNumChannels = mDevice->getNumOutputChannels();
 

@@ -2,9 +2,7 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/gl.h"
 
-#include "Osc.h"
-
-#define USE_UDP 1
+#include "cinder/osc/Osc.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -13,6 +11,7 @@ using namespace asio;
 using namespace asio::ip;
 
 const uint16_t destinationPort = 10001;
+const uint16_t localPort = 10000;
 
 class BroadcastSenderApp : public App {
 public:
@@ -26,15 +25,19 @@ public:
 	
 	ivec2 mCurrentMousePositon;
 
-	osc::UdpSocketRef mSocket;
-	osc::SenderUdp mSender;
+	osc::UdpSocketRef	mSocket;
+	osc::SenderUdp		mSender;
 };
 
 BroadcastSenderApp::BroadcastSenderApp()
-: mSocket( new udp::socket( App::get()->io_service(), udp::endpoint( udp::v4(), 10000 ) ) ),
+: mSocket( new udp::socket( App::get()->io_service(), udp::endpoint( udp::v4(), localPort ) ) ),
+	// The endpoint that we want to "send" to is the v4 broadcast address.
 	mSender( mSocket, udp::endpoint( address_v4::broadcast(), destinationPort ) )
 {
+	// Set the socket option for broadcast to true.
 	mSocket->set_option( asio::socket_base::broadcast(true) );
+	// For multicast setup examples...
+	// https://github.com/chriskohlhoff/asio/tree/master/asio/src/examples/cpp03/multicast
 }
 
 void BroadcastSenderApp::setup()
