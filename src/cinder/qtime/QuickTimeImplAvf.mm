@@ -404,6 +404,18 @@ bool MovieBase::stepBackward()
 	return can_step_backwards;
 }
 
+bool MovieBase::prerollAtRate( float rate )
+{
+	if( ! mPlayer || ! mPlayerItem || !mPlayable || mPlayer.status != AVPlayerStatusReadyToPlay) {
+		return false;
+	}
+	
+	[mPlayer prerollAtRate:rate completionHandler:^(BOOL finished) {
+		mSignalPrerollDone.emit(finished);
+	}];
+	return true;
+}
+	
 bool MovieBase::setRate( float rate )
 {
 	if( ! mPlayer || ! mPlayerItem )

@@ -139,6 +139,9 @@ class MovieBase {
 	 */
 	bool		setRate( float rate );
 
+	//! Begins loading media data to prime the render pipelines for playback from the current time with the given rate.
+	bool		prerollAtRate( float rate );
+
 	//! Sets the audio playback volume ranging from [0 - 1.0]
 	void		setVolume( float volume );
 	//! Gets the audio playback volume ranging from [0 - 1.0]
@@ -161,6 +164,7 @@ class MovieBase {
 	signals::Signal<void()>&	getEndedSignal() { return mSignalEnded; }
 	signals::Signal<void()>&	getJumpedSignal() { return mSignalJumped; }
 	signals::Signal<void()>&	getOutputWasFlushedSignal() { return mSignalOutputWasFlushed; }
+	signals::Signal<void(bool)>&	getPrerollDoneSignal() { return mSignalPrerollDone; }
 	
  protected:
 	MovieBase();
@@ -211,6 +215,7 @@ class MovieBase {
 	std::mutex					mMutex;
 	
 	signals::Signal<void()>		mSignalNewFrame, mSignalReady, mSignalCancelled, mSignalEnded, mSignalJumped, mSignalOutputWasFlushed;
+	signals::Signal<void(bool)> mSignalPrerollDone;
 
 	// internal callbacks used from NSObject delegate
 	void playerReady();
