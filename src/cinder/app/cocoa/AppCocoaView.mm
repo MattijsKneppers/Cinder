@@ -232,6 +232,7 @@ using namespace cinder::app;
 	r.size.height += sizeDelta.y;
 	r.origin.y -= sizeDelta.y;
 	[[mCinderView window] setFrame:r display:YES];
+    // NOTE: window setFrame causes CinderViewMac setFrameSize to be called, which in turn calls this class' resize. So this class' resize is called twice
 	[self resize];
 }
 

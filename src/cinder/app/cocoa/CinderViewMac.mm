@@ -186,6 +186,8 @@ using namespace cinder::app;
 	mRenderer->finishDraw();
 }
 
+
+// gets called when window size is changed (either by setting its size or by dragging a border) and view scales accordingly
 - (void)setFrameSize:(NSSize)newSize
 {
 	[super setFrameSize:newSize];
