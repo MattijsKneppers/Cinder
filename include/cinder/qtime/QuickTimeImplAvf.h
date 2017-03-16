@@ -112,7 +112,7 @@ class MovieBase {
 	//! Returns the current time of a movie in seconds
 	float		getCurrentTime() const;
 	//! Sets the movie to the time \a seconds
-	void		seekToTime( float seconds );
+	bool		seekToTime( float seconds );
 	//! Sets the movie time to the start time of frame \a frame
 	void		seekToFrame( int frame );
 	//! Sets the movie time to its beginning
@@ -164,6 +164,7 @@ class MovieBase {
 	signals::Signal<void()>&	getEndedSignal() { return mSignalEnded; }
 	signals::Signal<void()>&	getJumpedSignal() { return mSignalJumped; }
 	signals::Signal<void()>&	getOutputWasFlushedSignal() { return mSignalOutputWasFlushed; }
+	signals::Signal<void(bool)>&	getSeekDoneSignal() { return mSignalSeekDone; }
 	signals::Signal<void(bool)>&	getPrerollDoneSignal() { return mSignalPrerollDone; }
 	
  protected:
@@ -215,7 +216,7 @@ class MovieBase {
 	std::mutex					mMutex;
 	
 	signals::Signal<void()>		mSignalNewFrame, mSignalReady, mSignalCancelled, mSignalEnded, mSignalJumped, mSignalOutputWasFlushed;
-	signals::Signal<void(bool)> mSignalPrerollDone;
+	signals::Signal<void(bool)> mSignalSeekDone, mSignalPrerollDone;
 
 	// internal callbacks used from NSObject delegate
 	void playerReady();

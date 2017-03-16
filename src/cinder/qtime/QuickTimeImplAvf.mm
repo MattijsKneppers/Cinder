@@ -288,14 +288,18 @@ float MovieBase::getCurrentTime() const
 	return CMTimeGetSeconds([mPlayer currentTime]);
 }
 
-void MovieBase::seekToTime( float seconds )
+bool MovieBase::seekToTime( float seconds )
 {
-	if( ! mPlayer )
-		return;
+	if( ! mPlayer || ! mPlayerItem || !mPlayable || mPlayer.status != AVPlayerStatusReadyToPlay) {
+		return false;
+	}
 	
 //	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
 	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
-	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+		mSignalSeekDone.emit(finished);
+	}];
+	return true;
 }
 
 void MovieBase::seekToFrame( int frame )
