@@ -313,7 +313,10 @@ void MovieBase::seekToFrame( int frame )
 	CMTime addedFrame = CMTimeMultiply(oneFrame, frame);
 	CMTime added = CMTimeAdd(startTime, addedFrame);
 	
-	[mPlayer seekToTime:added toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+//		app::console() << " seeking to frame " << frame << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
+	[mPlayer seekToTime:added toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+		mSignalSeekDone.emit(finished);
+	}];
 }
 
 void MovieBase::seekToStart()
