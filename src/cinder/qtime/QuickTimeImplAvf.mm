@@ -295,7 +295,7 @@ bool MovieBase::seekToTime( float seconds )
 	}
 	
 //	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
-	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
+	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mAsset duration].timescale);
 	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
 		mSignalSeekDone.emit(finished);
 	}];
@@ -307,8 +307,7 @@ void MovieBase::seekToFrame( int frame )
 	if( ! mPlayer )
 		return;
 	
-	CMTime currentTime = [mPlayer currentTime];
-	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, currentTime.timescale);
+	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, [mAsset duration].timescale);
 	CMTime startTime = kCMTimeZero;
 	CMTime addedFrame = CMTimeMultiply(oneFrame, frame);
 	CMTime added = CMTimeAdd(startTime, addedFrame);
