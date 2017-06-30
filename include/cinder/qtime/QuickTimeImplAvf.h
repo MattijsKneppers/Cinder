@@ -24,6 +24,8 @@
 // This file is only meant to be included by QuickTime.h
 #pragma once
 
+#define USE_HAP
+
 #include "cinder/gl/Texture.h"
 #include "cinder/DataSource.h"
 #include "cinder/Display.h"
@@ -43,6 +45,7 @@ typedef CVBufferRef CVImageBufferRef;
 	@class MovieDelegate;
 	@class NSURL;
 	@class NSDictionary;
+	@class HapPixelBufferTexture, AVPlayerItemHapDXTOutput;
 #else
 	class AVPlayer;
 	class AVPlayerItem;
@@ -56,6 +59,8 @@ typedef CVBufferRef CVImageBufferRef;
 	class NSArray;
 	class NSError;
 	class NSDictionary;
+	class HapPixelBufferTexture;
+	class AVPlayerItemHapDXTOutput;
 	// -- 
 	class MovieDelegate;
 #endif
@@ -211,7 +216,12 @@ class MovieBase {
 	AVPlayer*					mPlayer;
 	AVPlayerItem*				mPlayerItem;
 	AVURLAsset*					mAsset;
+#ifdef USE_HAP
+	AVPlayerItemHapDXTOutput*	mPlayerVideoOutput;
+	HapPixelBufferTexture*		mHapTexture = nullptr;
+#else
 	AVPlayerItemVideoOutput*	mPlayerVideoOutput;
+#endif	
 
 	std::mutex					mMutex;
 	
