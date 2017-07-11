@@ -49,6 +49,7 @@
 #ifdef USE_HAP
 	#import <HapInAVFoundation/HapInAVFoundation.h>
 	#import "../../src/hapinavf/HapInAVF Test App/HapPixelBufferTexture.h"
+	#include "cinder/gl/GlslProg.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////
@@ -762,17 +763,52 @@ void MovieBase::loadAsset()
 	}];
 }
 
+ci::gl::GlslProgRef loadShaderProg(std::string vertexName, std::string fragmentName) {
+	try {
+		return gl::GlslProg::create(ci::app::loadResource(vertexName), ci::app::loadResource(fragmentName));
+	}
+	catch( gl::GlslProgCompileExc ex ) {
+		app::console() << "Error compiling shader: " << ex.what();
+		return NULL;
+	}
+}
+
 void MovieBase::updateFrame()
 {
 	if( mPlayerVideoOutput && mPlayerItem ) {
 		CMTime vTime = [mPlayer currentTime];
 #ifdef USE_HAP
-		if(!mHapTexture)
+		if(!mHapTexture) {
 			mHapTexture = [[HapPixelBufferTexture alloc] initWithContext:CGLGetCurrentContext()];
+			mHapShader = loadShaderProg("pass.vert", "ftDivergence.frag");
+		}
 
+		if(!mHapTexture || !mHapShader)
+			return;
+		
 		HapDecoderFrame	*dxtFrame = [mPlayerVideoOutput allocFrameClosestToTime:vTime];
 		if (dxtFrame!=nil)	{
+			NSSize					imgSize = [dxtFrame imgSize];
+			NSSize					dxtImgSize = [dxtFrame dxtImgSize];
+			NSSize					dxtTexSize;
+			
+			// On NVIDIA hardware there is a massive slowdown if DXT textures aren't POT-dimensioned, so we use POT-dimensioned backing
+			//	NOTE: NEEDS TESTING. this used to be the case- but this API is only available on 10.10+, so this may have been fixed.
+			int						tmpInt;
+			tmpInt = 1;
+			while (tmpInt < dxtImgSize.width)
+				tmpInt = tmpInt<<1;
+			dxtTexSize.width = tmpInt;
+			tmpInt = 1;
+			while (tmpInt < dxtImgSize.height)
+				tmpInt = tmpInt<<1;
+			dxtTexSize.height = tmpInt;
+			
+			//	pass the decoded frame to the hap texture
 			[mHapTexture setDecodedFrame:dxtFrame];
+			
+			newFrame(GL_TEXTURE_2D, [mHapTexture textureNames][0], imgSize.width, imgSize.height, dxtTexSize.width, dxtTexSize.height);
+		
 			[dxtFrame release];
 		}
 #else
@@ -1125,6 +1161,7 @@ void MovieLoader::updateLoadState() const
 
 } } // namespace cinder::qtime
 
+#ifdef USE_HAP
 /*
  HapPixelBufferTexture.m
  Hap QuickTime Playback
@@ -1296,8 +1333,8 @@ void MovieLoader::updateLoadState() const
 		
 		valid = YES;
 		
-		glPushAttrib(GL_ENABLE_BIT | GL_TEXTURE_BIT);
-		glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
+		//glPushAttrib(GL_ENABLE_BIT | GL_TEXTURE_BIT);
+		//glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
 		glEnable(GL_TEXTURE_2D);
 		
 		GLvoid		*baseAddress = dxtBaseAddresses[texIndex];
@@ -1359,8 +1396,8 @@ void MovieLoader::updateLoadState() const
 								  newDataLength,
 								  baseAddress);
 		
-		glPopClientAttrib();
-		glPopAttrib();
+		//glPopClientAttrib();
+		//glPopAttrib();
 		
 		glFlush();
 	}
@@ -1514,5 +1551,7 @@ void MovieLoader::updateLoadState() const
 	return shaderObject;
 }
 @end
+
+#endif // USE_HAP
 
 #endif // defined( CINDER_COCOA_TOUCH ) || ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) )

@@ -72,6 +72,7 @@ class MovieGl : public MovieBase {
 	void			allocateVisualContext() override;
 	void			deallocateVisualContext() override;
 	void			newFrame( CVImageBufferRef cvImage ) override;
+	void			newFrame( GLenum target, GLuint textureID, int width, int height, int texWidth, int texHeight ) override;
 	void			releaseFrame() override;
 	
 #if defined( CINDER_COCOA_TOUCH )

@@ -26,6 +26,7 @@
 
 #define USE_HAP
 
+#include "cinder/gl/Context.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/DataSource.h"
 #include "cinder/Display.h"
@@ -197,6 +198,7 @@ class MovieBase {
 	virtual void allocateVisualContext() = 0;
 	virtual void deallocateVisualContext() = 0;
 	virtual void newFrame( CVImageBufferRef cvImage ) = 0;
+	virtual void newFrame( GLenum target, GLuint textureID, int width, int height, int texWidth, int texHeight ) { };
 	virtual void releaseFrame() = 0;
 			
 	int32_t						mWidth, mHeight;
@@ -219,6 +221,8 @@ class MovieBase {
 #ifdef USE_HAP
 	AVPlayerItemHapDXTOutput*	mPlayerVideoOutput;
 	HapPixelBufferTexture*		mHapTexture = nullptr;
+	gl::GlslProgRef				mHapShader;
+	gl::FboRef					mHapFBO;
 #else
 	AVPlayerItemVideoOutput*	mPlayerVideoOutput;
 #endif	
