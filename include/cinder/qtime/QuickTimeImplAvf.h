@@ -219,13 +219,12 @@ class MovieBase {
 	AVPlayerItem*				mPlayerItem;
 	AVURLAsset*					mAsset;
 #ifdef USE_HAP
-	AVPlayerItemHapDXTOutput*	mPlayerVideoOutput;
+	AVPlayerItemHapDXTOutput*	mPlayerHapOutput;
 	HapPixelBufferTexture*		mHapTexture = nullptr;
 	gl::GlslProgRef				mHapShader;
 	gl::FboRef					mHapFBO;
-#else
+#endif
 	AVPlayerItemVideoOutput*	mPlayerVideoOutput;
-#endif	
 
 	std::mutex					mMutex;
 	

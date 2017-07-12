@@ -284,22 +284,26 @@ void MovieGl::newFrame( GLenum target, GLuint textureID, int width, int height, 
 #ifdef USE_HAP
 	
 	if(!mHapFBO) {
-		mHapFBO = gl::Fbo::create(width, height, setTextureFormat(GL_RGBA, GL_TEXTURE_RECTANGLE_ARB, GL_LINEAR));
+		mHapFBO = gl::Fbo::create(width, height, true, false);//setTextureFormat(GL_RGBA, GL_TEXTURE_RECTANGLE, GL_LINEAR));
 	}
 	
 	{
 		gl::ScopedFramebuffer fboScope(mHapFBO);
 		gl::clear(ColorA().zero());
 		
-		//gl::ScopedGlslProg shaderScope(mHapShader);
-		
-		//fluidVelocitySwapBuffer->getFbo()->getColorTexture()->bind(0);
-		
-		//mHapShader->uniform("velocity", 0);
-		
 		gl::ScopedViewport scopedViewport(0, 0, width, height);
 		gl::Texture2dRef tmp = gl::Texture2d::create( target, textureID, texWidth, texHeight, true, nullptr );
-		gl::draw(tmp, Rectf(0, 0, 0, 0));
+		//gl::draw(tmp, Rectf(0, 0, width, height));
+		
+		gl::ScopedGlslProg shaderScope(mHapShader);
+		//auto glsl = getStockShader( gl::ShaderDef().uniformBasedPosAndTexCoord().color().texture( tmp ) );
+		//gl::ScopedGlslProg glslScp( glsl );
+		
+		mHapShader->uniform( "cocgsy_src", 0 );
+		vec2 ultc (0., (double)height / texHeight);
+		vec2 lrtc ((double)width / texWidth, 0.);		
+		
+		gl::drawSolidRect(Rectf(vec2(0, 0), vec2(width, height)), ultc, lrtc);
 	}
 
 	mTexture = mHapFBO->getColorTexture();

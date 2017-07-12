@@ -192,6 +192,9 @@ MovieBase::MovieBase()
 	mPlayerItem( nil ),
 	mAsset( nil ),
 	mPlayerVideoOutput( nil ),
+#ifdef USE_HAP
+	mPlayerHapOutput(nil),
+#endif
 	mPlayerDelegate( nil ),
 	mResponder( nullptr ),
 	mAssetLoaded( false )
@@ -281,13 +284,13 @@ bool MovieBase::checkNewFrame()
 		return false;
 	
 	if( mPlayerVideoOutput )
-#ifdef USE_HAP
-	{
-		return true;
-	}
-#else
+//#ifdef USE_HAP
+//	{
+//		return true;
+//	}
+//#else
 		return [mPlayerVideoOutput hasNewPixelBufferForItemTime:[mPlayer currentTime]];
-#endif
+//#endif
 	else
 		return false;
 }
@@ -780,13 +783,12 @@ void MovieBase::updateFrame()
 #ifdef USE_HAP
 		if(!mHapTexture) {
 			mHapTexture = [[HapPixelBufferTexture alloc] initWithContext:CGLGetCurrentContext()];
-			mHapShader = loadShaderProg("pass.vert", "ftDivergence.frag");
 		}
 
-		if(!mHapTexture || !mHapShader)
+		if(!mHapTexture || !mPlayerHapOutput)
 			return;
 		
-		HapDecoderFrame	*dxtFrame = [mPlayerVideoOutput allocFrameClosestToTime:vTime];
+		HapDecoderFrame	*dxtFrame = [mPlayerHapOutput allocFrameClosestToTime:vTime];
 		if (dxtFrame!=nil)	{
 			NSSize					imgSize = [dxtFrame imgSize];
 			NSSize					dxtImgSize = [dxtFrame dxtImgSize];
@@ -804,14 +806,30 @@ void MovieBase::updateFrame()
 				tmpInt = tmpInt<<1;
 			dxtTexSize.height = tmpInt;
 			
+			OSType codecSubType = [dxtFrame codecSubType];
+			if (!mHapShader) {
+				if (codecSubType == kHapYCoCgCodecSubType) {
+					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+				}
+				else if (codecSubType == kHapYCoCgACodecSubType) {
+					// TODO: YCoCgAlpha
+					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+				}
+				else {
+					mHapShader = loadShaderProg("pass.vert", "pass.frag");
+				}
+			}
+			
 			//	pass the decoded frame to the hap texture
 			[mHapTexture setDecodedFrame:dxtFrame];
-			
 			newFrame(GL_TEXTURE_2D, [mHapTexture textureNames][0], imgSize.width, imgSize.height, dxtTexSize.width, dxtTexSize.height);
-		
 			[dxtFrame release];
+			
+			mSignalNewFrame.emit();
+			
+			return;
 		}
-#else
+#endif
 		if( [mPlayerVideoOutput hasNewPixelBufferForItemTime:vTime] ) {
 			releaseFrame();
 			
@@ -822,7 +840,6 @@ void MovieBase::updateFrame()
 				mSignalNewFrame.emit();
 			}
 		}
-#endif
 	}
 }
 
@@ -875,20 +892,26 @@ void MovieBase::processAssetTracks( AVAsset* asset )
 
 void MovieBase::createPlayerItemOutput( const AVPlayerItem* playerItem )
 {
-#ifdef USE_HAP
-	AVPlayerItemHapDXTOutput *oldPlayerVideoOutput = mPlayerVideoOutput;
-	mPlayerVideoOutput = [[AVPlayerItemHapDXTOutput alloc] init];
-	[oldPlayerVideoOutput release];
-#else
 	AVPlayerItemVideoOutput *oldPlayerVideoOutput = mPlayerVideoOutput;
 	mPlayerVideoOutput = [[AVPlayerItemVideoOutput alloc] initWithPixelBufferAttributes:avPlayerItemOutputDictionary()];
 	[oldPlayerVideoOutput release];
 	dispatch_queue_t outputQueue = dispatch_queue_create("movieVideoOutputQueue", DISPATCH_QUEUE_SERIAL);
 	[mPlayerVideoOutput setDelegate:mPlayerDelegate queue:outputQueue];
 	dispatch_release(outputQueue);
-#endif
 	mPlayerVideoOutput.suppressesPlayerRendering = YES;
 	[playerItem addOutput:mPlayerVideoOutput];
+
+#ifdef USE_HAP
+	if (mPlayerHapOutput != nil)	{
+		if (playerItem != nil)
+			[playerItem removeOutput:mPlayerHapOutput];
+	}
+	else {
+		mPlayerHapOutput = [[AVPlayerItemHapDXTOutput alloc] init];
+		mPlayerHapOutput.suppressesPlayerRendering = YES;
+	}
+	[playerItem addOutput:mPlayerHapOutput];
+#endif
 }
 
 void MovieBase::addObservers()
@@ -1438,117 +1461,6 @@ void MovieLoader::updateLoadState() const
 {
 	if (!valid) return 0;
 	return backingHeights;
-}
-
-- (GLhandleARB)shaderProgramObject
-{
-	if (valid && decodedFrame!=nil)	{
-		OSType		codecSubType = [decodedFrame codecSubType];
-		if (codecSubType==kHapYCoCgCodecSubType)	{
-			if (shader == NULL)
-			{
-				GLhandleARB vert = [self loadShaderOfType:GL_VERTEX_SHADER_ARB named:@"ScaledCoCgYToRGBA"];
-				GLhandleARB frag = [self loadShaderOfType:GL_FRAGMENT_SHADER_ARB named:@"ScaledCoCgYToRGBA"];
-				GLint programLinked = 0;
-				if (frag && vert)
-				{
-					shader = glCreateProgramObjectARB();
-					glAttachObjectARB(shader, vert);
-					glAttachObjectARB(shader, frag);
-					glLinkProgramARB(shader);
-					glGetObjectParameterivARB(shader,
-											  GL_OBJECT_LINK_STATUS_ARB,
-											  &programLinked);
-					if(programLinked == 0 )
-					{
-						glDeleteObjectARB(shader);
-						shader = NULL;
-					}
-					else	{
-						glUseProgram(shader);
-						GLint			samplerLoc = -1;
-						samplerLoc = glGetUniformLocation(shader, "cocgsy_src");
-						if (samplerLoc >= 0)
-							glUniform1i(samplerLoc,0);
-						glUseProgram(0);
-					}
-				}
-				if (frag) glDeleteObjectARB(frag);
-				if (vert) glDeleteObjectARB(vert);
-			}
-			return shader;
-		}
-		else if (codecSubType == kHapYCoCgACodecSubType)	{
-			if (alphaShader == NULL)
-			{
-				GLhandleARB vert = [self loadShaderOfType:GL_VERTEX_SHADER_ARB named:@"ScaledCoCgYToRGBA"];
-				GLhandleARB frag = [self loadShaderOfType:GL_FRAGMENT_SHADER_ARB named:@"ScaledCoCgYPlusAToRGBA"];
-				GLint programLinked = 0;
-				if (frag && vert)
-				{
-					alphaShader = glCreateProgramObjectARB();
-					glAttachObjectARB(alphaShader, vert);
-					glAttachObjectARB(alphaShader, frag);
-					glLinkProgramARB(alphaShader);
-					glGetObjectParameterivARB(alphaShader,
-											  GL_OBJECT_LINK_STATUS_ARB,
-											  &programLinked);
-					if(programLinked == 0 )
-					{
-						glDeleteObjectARB(alphaShader);
-						alphaShader = NULL;
-					}
-					else	{
-						glUseProgram(alphaShader);
-						GLint			samplerLoc = -1;
-						samplerLoc = glGetUniformLocation(alphaShader, "cocgsy_src");
-						if (samplerLoc >= 0)
-							glUniform1i(samplerLoc,0);
-						samplerLoc = -1;
-						samplerLoc = glGetUniformLocation(alphaShader, "alpha_src");
-						if (samplerLoc >= 0)
-							glUniform1i(samplerLoc,1);
-						glUseProgram(0);
-					}
-				}
-				if (frag) glDeleteObjectARB(frag);
-				if (vert) glDeleteObjectARB(vert);
-			}
-			return alphaShader;
-		}
-	}
-	return NULL;
-}
-
-- (GLhandleARB)loadShaderOfType:(GLenum)type named:(NSString *)name
-{
-	NSString *extension = (type == GL_VERTEX_SHADER_ARB ? @"vert" : @"frag");
-	NSString  *path = [[NSBundle bundleForClass:[self class]] pathForResource:name
-																	   ofType:extension];
-	NSString *source = nil;
-	if (path) source = [NSString stringWithContentsOfFile:path usedEncoding:nil error:nil];
-	
-	GLint		shaderCompiled = 0;
-	GLhandleARB shaderObject = NULL;
-	
-	if(source != nil)
-	{
-		const GLcharARB *glSource = [source cStringUsingEncoding:NSASCIIStringEncoding];
-		
-		shaderObject = glCreateShaderObjectARB(type);
-		glShaderSourceARB(shaderObject, 1, &glSource, NULL);
-		glCompileShaderARB(shaderObject);
-		glGetObjectParameterivARB(shaderObject,
-								  GL_OBJECT_COMPILE_STATUS_ARB,
-								  &shaderCompiled);
-		
-		if(shaderCompiled == 0 )
-		{
-			glDeleteObjectARB(shaderObject);
-			shaderObject = NULL;
-		}
-	}
-	return shaderObject;
 }
 @end
 
