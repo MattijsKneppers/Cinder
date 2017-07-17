@@ -1387,9 +1387,7 @@ void MovieLoader::updateLoadState() const
 		
 		valid = YES;
 		
-		//glPushAttrib(GL_ENABLE_BIT | GL_TEXTURE_BIT);
-		//glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
-		glEnable(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE0);
 		
 		GLvoid		*baseAddress = dxtBaseAddresses[texIndex];
 		
@@ -1438,7 +1436,7 @@ void MovieLoader::updateLoadState() const
 		}
 		
 		glTextureRangeAPPLE(GL_TEXTURE_2D, newDataLength, baseAddress);
-		glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+		//glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
 		
 		glCompressedTexSubImage2D(GL_TEXTURE_2D,
 								  0,
@@ -1450,10 +1448,7 @@ void MovieLoader::updateLoadState() const
 								  newDataLength,
 								  baseAddress);
 		
-		//glPopClientAttrib();
-		//glPopAttrib();
-		
-		glFlush();
+		cinder::gl::checkError();
 	}
 }
 - (HapDecoderFrame *) decodedFrame	{
