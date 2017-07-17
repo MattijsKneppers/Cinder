@@ -264,6 +264,10 @@ float MovieBase::getPixelAspectRatio() const
 
 bool MovieBase::checkPlaythroughOk()
 {
+#ifdef USE_HAP
+	if(mHapLoaded)
+		return true;
+#endif
 	mPlayThroughOk = [mPlayerItem isPlaybackLikelyToKeepUp];
 	
 	return mPlayThroughOk;
@@ -678,7 +682,32 @@ void MovieBase::loadAsset()
 				
 				AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 				AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
-				
+
+#ifdef USE_HAP
+				mHapLoaded = false;
+				NSArray	*trackFormatDescs = [videoTrack formatDescriptions];
+				CMFormatDescriptionRef	desc = (trackFormatDescs==nil || [trackFormatDescs count]<1) ? nil : (CMFormatDescriptionRef)[trackFormatDescs objectAtIndex:0];
+				if (desc!=nil) {
+					OSType		fourcc = CMFormatDescriptionGetMediaSubType(desc);
+					char		destChars[5];
+					destChars[0] = (fourcc>>24) & 0xFF;
+					destChars[1] = (fourcc>>16) & 0xFF;
+					destChars[2] = (fourcc>>8) & 0xFF;
+					destChars[3] = (fourcc) & 0xFF;
+					destChars[4] = 0;
+					NSString *descString = [NSString stringWithCString:destChars encoding:NSASCIIStringEncoding];
+					if(!([descString rangeOfString:@"Hap"].location == NSNotFound)) {
+						seamlessSegments = false;
+						mHapLoaded = true;
+						/*if([descString compare:@"HapY"] == NSOrderedSame) {
+							mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
+						}
+						else {
+							mHapBitmapType = 0;
+						}*/
+					}
+				}
+#endif
 				if (seamlessSegments) {
 					
 					float offset = 0;
@@ -810,10 +839,12 @@ void MovieBase::updateFrame()
 			if (!mHapShader) {
 				if (codecSubType == kHapYCoCgCodecSubType) {
 					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader->uniform( "cocgsy_src", 0 );
 				}
 				else if (codecSubType == kHapYCoCgACodecSubType) {
 					// TODO: YCoCgAlpha
 					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader->uniform( "cocgsy_src", 0 );
 				}
 				else {
 					mHapShader = loadShaderProg("pass.vert", "pass.frag");

@@ -223,6 +223,7 @@ class MovieBase {
 	HapPixelBufferTexture*		mHapTexture = nullptr;
 	gl::GlslProgRef				mHapShader;
 	gl::FboRef					mHapFBO;
+	bool						mHapLoaded = false;
 #endif
 	AVPlayerItemVideoOutput*	mPlayerVideoOutput;
 
