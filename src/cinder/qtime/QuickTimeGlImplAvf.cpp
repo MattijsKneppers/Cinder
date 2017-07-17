@@ -295,14 +295,18 @@ void MovieGl::newFrame( GLenum target, GLuint textureID, int width, int height, 
 		gl::clear(ColorA().zero());
 		
 		gl::ScopedViewport scopedViewport(0, 0, width, height);
+		gl::pushMatrices();
+		gl::setMatricesWindow(width, height);
+		
 		gl::Texture2dRef tmp = gl::Texture2d::create( target, textureID, texWidth, texHeight, true, nullptr );
 		
 		gl::ScopedGlslProg shaderScope(mHapShader);
 		gl::ScopedTextureBind bindScope(tmp);
 		
-		vec2 ultc (0., (double)height / texHeight);
-		vec2 lrtc ((double)width / texWidth, 0.);
+		vec2 ultc (0., 0.);
+		vec2 lrtc ((double)width / texWidth, (double)height / texHeight);
 		gl::drawSolidRect(Rectf(vec2(0, 0), vec2(width, height)), ultc, lrtc);
+		gl::popMatrices();
 	}
 
 	mTexture = mHapFBO->getColorTexture();
