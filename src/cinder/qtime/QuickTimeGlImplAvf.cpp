@@ -23,6 +23,8 @@
 
 #include "cinder/Cinder.h"
 #include "cinder/gl/scoped.h"
+#include "cinder/gl/draw.h"
+#include "cinder/gl/Fbo.h"
 
 // This path is not used on 64-bit Mac or Windows. On the Mac we only use this path for >=Mac OS 10.8
 #if ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) ) || ( defined( CINDER_MSW ) && ( ! defined( _WIN64 ) ) ) || defined( CINDER_COCOA_TOUCH )
@@ -260,6 +262,55 @@ void MovieGl::newFrame( CVImageBufferRef cvImage )
 
 	mTexture = mTextureCache->add( cvImage );
 
+#endif
+}
+
+ci::gl::Fbo::Format setTextureFormat(GLint _internalFormat, GLenum _target, GLint _filter)
+{
+	gl::Texture::Format texFormat;
+	texFormat.setInternalFormat(_internalFormat);
+	texFormat.setTarget(_target);
+	texFormat.setMinFilter(_filter);
+	texFormat.setMagFilter(_filter);
+	gl::Fbo::Format format;
+	format.setColorTextureFormat(texFormat);
+	format.enableDepthBuffer(false);
+	format.enableStencilBuffer(false);
+	return format;
+}
+
+void MovieGl::newFrame( GLenum target, GLuint textureID, int width, int height, int texWidth, int texHeight )
+{
+#ifdef USE_HAP
+	
+	if(!mHapFBO) {
+		mHapFBO = gl::Fbo::create(width, height, true, false);
+	}
+	
+	if(!mHapFBO || !mHapShader)
+		return;
+	
+	{
+		gl::ScopedFramebuffer fboScope(mHapFBO);
+		gl::clear(ColorA().zero());
+		
+		gl::ScopedViewport scopedViewport(0, 0, width, height);
+		gl::pushMatrices();
+		gl::setMatricesWindow(width, height);
+		
+		gl::Texture2dRef tmp = gl::Texture2d::create( target, textureID, texWidth, texHeight, true, nullptr );
+		
+		gl::ScopedGlslProg shaderScope(mHapShader);
+		gl::ScopedTextureBind bindScope(tmp);
+		
+		vec2 ultc (0., 0.);
+		vec2 lrtc ((double)width / texWidth, (double)height / texHeight);
+		gl::drawSolidRect(Rectf(vec2(0, 0), vec2(width, height)), ultc, lrtc);
+		gl::popMatrices();
+	}
+
+	mTexture = mHapFBO->getColorTexture();
+	
 #endif
 }
 

@@ -24,6 +24,9 @@
 // This file is only meant to be included by QuickTime.h
 #pragma once
 
+#define USE_HAP
+
+#include "cinder/gl/Context.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/DataSource.h"
 #include "cinder/Display.h"
@@ -43,6 +46,7 @@ typedef CVBufferRef CVImageBufferRef;
 	@class MovieDelegate;
 	@class NSURL;
 	@class NSDictionary;
+	@class HapPixelBufferTexture, AVPlayerItemHapDXTOutput;
 #else
 	class AVPlayer;
 	class AVPlayerItem;
@@ -56,6 +60,8 @@ typedef CVBufferRef CVImageBufferRef;
 	class NSArray;
 	class NSError;
 	class NSDictionary;
+	class HapPixelBufferTexture;
+	class AVPlayerItemHapDXTOutput;
 	// -- 
 	class MovieDelegate;
 #endif
@@ -192,6 +198,7 @@ class MovieBase {
 	virtual void allocateVisualContext() = 0;
 	virtual void deallocateVisualContext() = 0;
 	virtual void newFrame( CVImageBufferRef cvImage ) = 0;
+	virtual void newFrame( GLenum target, GLuint textureID, int width, int height, int texWidth, int texHeight ) { };
 	virtual void releaseFrame() = 0;
 			
 	int32_t						mWidth, mHeight;
@@ -211,6 +218,13 @@ class MovieBase {
 	AVPlayer*					mPlayer;
 	AVPlayerItem*				mPlayerItem;
 	AVURLAsset*					mAsset;
+#ifdef USE_HAP
+	AVPlayerItemHapDXTOutput*	mPlayerHapOutput;
+	HapPixelBufferTexture*		mHapTexture = nullptr;
+	gl::GlslProgRef				mHapShader;
+	gl::FboRef					mHapFBO;
+	bool						mHapLoaded = false;
+#endif
 	AVPlayerItemVideoOutput*	mPlayerVideoOutput;
 
 	std::mutex					mMutex;

@@ -8,3 +8,6 @@
 	path = include/boost
 	url = git://github.com/cinder/Cinder-Boost.git
 	branch = boost_1_58
+[submodule "src/hapinavf"]
+	path = src/hapinavf
+	url = https://github.com/Vidvox/hap-in-avfoundation.git

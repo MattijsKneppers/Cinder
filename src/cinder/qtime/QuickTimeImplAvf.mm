@@ -46,6 +46,12 @@
 #include "cinder/qtime/QuickTimeImplAvf.h"
 #include "cinder/qtime/AvfUtils.h"
 
+#ifdef USE_HAP
+	#import <HapInAVFoundation/HapInAVFoundation.h>
+	#import "../../src/hapinavf/HapInAVF Test App/HapPixelBufferTexture.h"
+	#include "cinder/gl/GlslProg.h"
+#endif
+
 ////////////////////////////////////////////////////////////////////////
 //
 // TODO: use global time from the system clock
@@ -186,6 +192,9 @@ MovieBase::MovieBase()
 	mPlayerItem( nil ),
 	mAsset( nil ),
 	mPlayerVideoOutput( nil ),
+#ifdef USE_HAP
+	mPlayerHapOutput(nil),
+#endif
 	mPlayerDelegate( nil ),
 	mResponder( nullptr ),
 	mAssetLoaded( false )
@@ -255,6 +264,10 @@ float MovieBase::getPixelAspectRatio() const
 
 bool MovieBase::checkPlaythroughOk()
 {
+#ifdef USE_HAP
+	if(mHapLoaded)
+		return true;
+#endif
 	mPlayThroughOk = [mPlayerItem isPlaybackLikelyToKeepUp];
 	
 	return mPlayThroughOk;
@@ -275,7 +288,13 @@ bool MovieBase::checkNewFrame()
 		return false;
 	
 	if( mPlayerVideoOutput )
+//#ifdef USE_HAP
+//	{
+//		return true;
+//	}
+//#else
 		return [mPlayerVideoOutput hasNewPixelBufferForItemTime:[mPlayer currentTime]];
+//#endif
 	else
 		return false;
 }
@@ -663,7 +682,32 @@ void MovieBase::loadAsset()
 				
 				AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 				AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
-				
+
+#ifdef USE_HAP
+				mHapLoaded = false;
+				NSArray	*trackFormatDescs = [videoTrack formatDescriptions];
+				CMFormatDescriptionRef	desc = (trackFormatDescs==nil || [trackFormatDescs count]<1) ? nil : (CMFormatDescriptionRef)[trackFormatDescs objectAtIndex:0];
+				if (desc!=nil) {
+					OSType		fourcc = CMFormatDescriptionGetMediaSubType(desc);
+					char		destChars[5];
+					destChars[0] = (fourcc>>24) & 0xFF;
+					destChars[1] = (fourcc>>16) & 0xFF;
+					destChars[2] = (fourcc>>8) & 0xFF;
+					destChars[3] = (fourcc) & 0xFF;
+					destChars[4] = 0;
+					NSString *descString = [NSString stringWithCString:destChars encoding:NSASCIIStringEncoding];
+					if(!([descString rangeOfString:@"Hap"].location == NSNotFound)) {
+						seamlessSegments = false;
+						mHapLoaded = true;
+						/*if([descString compare:@"HapY"] == NSOrderedSame) {
+							mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
+						}
+						else {
+							mHapBitmapType = 0;
+						}*/
+					}
+				}
+#endif
 				if (seamlessSegments) {
 					
 					float offset = 0;
@@ -751,10 +795,72 @@ void MovieBase::loadAsset()
 	}];
 }
 
+ci::gl::GlslProgRef loadShaderProg(std::string vertexName, std::string fragmentName) {
+	try {
+		return gl::GlslProg::create(ci::app::loadResource(vertexName), ci::app::loadResource(fragmentName));
+	}
+	catch( gl::GlslProgCompileExc ex ) {
+		app::console() << "Error compiling shader: " << ex.what();
+		return NULL;
+	}
+}
+
 void MovieBase::updateFrame()
 {
 	if( mPlayerVideoOutput && mPlayerItem ) {
 		CMTime vTime = [mPlayer currentTime];
+#ifdef USE_HAP
+		if(!mHapTexture) {
+			mHapTexture = [[HapPixelBufferTexture alloc] initWithContext:CGLGetCurrentContext()];
+		}
+
+		if(!mHapTexture || !mPlayerHapOutput)
+			return;
+		
+		HapDecoderFrame	*dxtFrame = [mPlayerHapOutput allocFrameClosestToTime:vTime];
+		if (dxtFrame!=nil)	{
+			NSSize					imgSize = [dxtFrame imgSize];
+			NSSize					dxtImgSize = [dxtFrame dxtImgSize];
+			NSSize					dxtTexSize;
+			
+			// On NVIDIA hardware there is a massive slowdown if DXT textures aren't POT-dimensioned, so we use POT-dimensioned backing
+			//	NOTE: NEEDS TESTING. this used to be the case- but this API is only available on 10.10+, so this may have been fixed.
+			int						tmpInt;
+			tmpInt = 1;
+			while (tmpInt < dxtImgSize.width)
+				tmpInt = tmpInt<<1;
+			dxtTexSize.width = tmpInt;
+			tmpInt = 1;
+			while (tmpInt < dxtImgSize.height)
+				tmpInt = tmpInt<<1;
+			dxtTexSize.height = tmpInt;
+			
+			OSType codecSubType = [dxtFrame codecSubType];
+			if (!mHapShader) {
+				if (codecSubType == kHapYCoCgCodecSubType) {
+					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader->uniform( "cocgsy_src", 0 );
+				}
+				else if (codecSubType == kHapYCoCgACodecSubType) {
+					// TODO: YCoCgAlpha
+					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader->uniform( "cocgsy_src", 0 );
+				}
+				else {
+					mHapShader = loadShaderProg("pass.vert", "pass.frag");
+				}
+			}
+			
+			//	pass the decoded frame to the hap texture
+			[mHapTexture setDecodedFrame:dxtFrame];
+			newFrame(GL_TEXTURE_2D, [mHapTexture textureNames][0], imgSize.width, imgSize.height, dxtTexSize.width, dxtTexSize.height);
+			[dxtFrame release];
+			
+			mSignalNewFrame.emit();
+			
+			return;
+		}
+#endif
 		if( [mPlayerVideoOutput hasNewPixelBufferForItemTime:vTime] ) {
 			releaseFrame();
 			
@@ -825,6 +931,18 @@ void MovieBase::createPlayerItemOutput( const AVPlayerItem* playerItem )
 	dispatch_release(outputQueue);
 	mPlayerVideoOutput.suppressesPlayerRendering = YES;
 	[playerItem addOutput:mPlayerVideoOutput];
+
+#ifdef USE_HAP
+	if (mPlayerHapOutput != nil)	{
+		if (playerItem != nil)
+			[playerItem removeOutput:mPlayerHapOutput];
+	}
+	else {
+		mPlayerHapOutput = [[AVPlayerItemHapDXTOutput alloc] init];
+		mPlayerHapOutput.suppressesPlayerRendering = YES;
+	}
+	[playerItem addOutput:mPlayerHapOutput];
+#endif
 }
 
 void MovieBase::addObservers()
@@ -946,6 +1064,10 @@ MovieSurface::MovieSurface( const MovieLoader& loader )
 
 MovieSurface::~MovieSurface()
 {
+#ifdef USE_HAP
+	if(mHapTexture)
+		[mHapTexture release];
+#endif
 	deallocateVisualContext();
 }
 
@@ -1092,5 +1214,282 @@ void MovieLoader::updateLoadState() const
 }
 
 } } // namespace cinder::qtime
+
+#ifdef USE_HAP
+/*
+ HapPixelBufferTexture.m
+ Hap QuickTime Playback
+ 
+ Copyright (c) 2012-2013, Tom Butterworth and Vidvox LLC. All rights reserved.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ 
+ * Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ 
+ * Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+ 
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#import <OpenGL/CGLMacro.h>
+
+#define FourCCLog(n,f) NSLog(@"%@, %c%c%c%c",n,(int)((f>>24)&0xFF),(int)((f>>16)&0xFF),(int)((f>>8)&0xFF),(int)((f>>0)&0xFF))
+
+
+@interface HapPixelBufferTexture (Shader)
+- (GLhandleARB)loadShaderOfType:(GLenum)type named:(NSString *)name;
+@end
+
+
+
+
+@implementation HapPixelBufferTexture
+- (id)initWithContext:(CGLContextObj)context
+{
+	self = [super init];
+	if (self)
+	{
+		textureCount = 0;
+		for (int i=0; i<2; ++i)	{
+			textures[i] = 0;
+			backingHeights[i] = 0;
+			backingWidths[i] = 0;
+			internalFormats[i] = 0;
+		}
+		decodedFrame = nil;
+		width = 0;
+		height = 0;
+		valid = NO;
+		shader = 0;
+		alphaShader = 0;
+		cgl_ctx = CGLRetainContext(context);
+	}
+	return self;
+}
+
+- (void)dealloc
+{
+	for (int texIndex=0; texIndex<textureCount; ++texIndex)	{
+		if (textures[texIndex] != 0)
+			glDeleteTextures(1,&(textures[texIndex]));
+	}
+	if (shader != NULL) glDeleteObjectARB(shader);
+	if (alphaShader != NULL) glDeleteObjectARB(alphaShader);
+	if (decodedFrame!=nil)	{
+		[decodedFrame release];
+		decodedFrame = nil;
+	}
+	CGLReleaseContext(cgl_ctx);
+	[super dealloc];
+}
+- (void) setDecodedFrame:(HapDecoderFrame *)newFrame	{
+	[newFrame retain];
+	
+	[decodedFrame release];
+	decodedFrame = newFrame;
+	
+	valid = NO;
+	
+	if (decodedFrame == NULL)
+	{
+		NSLog(@"\t\terr: decodedFrame nil, bailing. %s",__func__);
+		return;
+	}
+	
+	NSSize			tmpSize = [decodedFrame imgSize];
+	width = tmpSize.width;
+	height = tmpSize.height;
+	
+	tmpSize = [decodedFrame dxtImgSize];
+	GLuint			roundedWidth = tmpSize.width;
+	GLuint			roundedHeight = tmpSize.height;
+	if (roundedWidth % 4 != 0 || roundedHeight % 4 != 0)	{
+		NSLog(@"\t\terr: width isn't a multiple of 4, bailing. %s",__func__);
+		return;
+	}
+	
+	textureCount = [decodedFrame dxtPlaneCount];
+	OSType			*dxtPixelFormats = [decodedFrame dxtPixelFormats];
+	GLenum			newInternalFormat;
+	size_t			*dxtDataSizes = [decodedFrame dxtDataSizes];
+	void			**dxtBaseAddresses = [decodedFrame dxtDatas];
+	for (int texIndex=0; texIndex<textureCount; ++texIndex)	{
+		unsigned int	bitsPerPixel = 0;
+		switch (dxtPixelFormats[texIndex]) {
+			case kHapCVPixelFormat_RGB_DXT1:
+				newInternalFormat = HapTextureFormat_RGB_DXT1;
+				bitsPerPixel = 4;
+				break;
+			case kHapCVPixelFormat_RGBA_DXT5:
+			case kHapCVPixelFormat_YCoCg_DXT5:
+				newInternalFormat = HapTextureFormat_RGBA_DXT5;
+				bitsPerPixel = 8;
+				break;
+			case kHapCVPixelFormat_CoCgXY:
+				if (texIndex==0)	{
+					newInternalFormat = HapTextureFormat_RGBA_DXT5;
+					bitsPerPixel = 8;
+				}
+				else	{
+					newInternalFormat = HapTextureFormat_A_RGTC1;
+					bitsPerPixel = 4;
+				}
+				
+				//newInternalFormat = HapTextureFormat_RGBA_DXT5;
+				//bitsPerPixel = 8;
+				break;
+			case kHapCVPixelFormat_YCoCg_DXT5_A_RGTC1:
+				if (texIndex==0)	{
+					newInternalFormat = HapTextureFormat_RGBA_DXT5;
+					bitsPerPixel = 8;
+				}
+				else	{
+					newInternalFormat = HapTextureFormat_A_RGTC1;
+					bitsPerPixel = 4;
+				}
+				break;
+			case kHapCVPixelFormat_A_RGTC1:
+				newInternalFormat = HapTextureFormat_A_RGTC1;
+				bitsPerPixel = 4;
+				break;
+			default:
+				// we don't support non-DXT pixel buffers
+				NSLog(@"\t\terr: unrecognized pixel format (%X) at index %d in %s",dxtPixelFormats[texIndex],texIndex,__func__);
+				FourCCLog(@"\t\tpixel format fourcc is",dxtPixelFormats[texIndex]);
+				valid = NO;
+				return;
+				break;
+		}
+		size_t			bytesPerRow = (roundedWidth * bitsPerPixel) / 8;
+		GLsizei			newDataLength = (int)(bytesPerRow * roundedHeight);
+		size_t			actualBufferSize = dxtDataSizes[texIndex];
+		
+		//	make sure the buffer's at least as big as necessary
+		if (newDataLength > actualBufferSize)	{
+			NSLog(@"\t\terr: new data length incorrect, %d vs %ld in %s",newDataLength,actualBufferSize,__func__);
+			valid = NO;
+			return;
+		}
+		
+		//	if we got this far we're good to go
+		
+		valid = YES;
+		
+		glActiveTexture(GL_TEXTURE0);
+		
+		GLvoid		*baseAddress = dxtBaseAddresses[texIndex];
+		
+		// Create a new texture if our current one isn't adequate
+		
+		if (textures[texIndex] == 0	||
+			roundedWidth > backingWidths[texIndex] ||
+			roundedHeight > backingHeights[texIndex] ||
+			newInternalFormat != internalFormats[texIndex])
+		{
+			if (textures[texIndex] != 0)
+			{
+				glDeleteTextures(1, &(textures[texIndex]));
+			}
+			
+			glGenTextures(1, &(textures[texIndex]));
+			
+			glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
+			
+			// On NVIDIA hardware there is a massive slowdown if DXT textures aren't POT-dimensioned, so we use POT-dimensioned backing
+			//	NOTE: NEEDS TESTING. this used to be the case- but this API is only available on 10.10+, so this may have been fixed.
+			backingWidths[texIndex] = 1;
+			while (backingWidths[texIndex] < roundedWidth) backingWidths[texIndex] <<= 1;
+			backingHeights[texIndex] = 1;
+			while (backingHeights[texIndex] < roundedHeight) backingHeights[texIndex] <<= 1;
+			
+			//	...if we aren't doing POT dimensions, then we need to do this!
+			//backingWidths[texIndex] = roundedWidth;
+			//backingHeights[texIndex] = roundedHeight;
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_STORAGE_HINT_APPLE , GL_STORAGE_SHARED_APPLE);
+			
+			// We allocate the texture with no pixel data, then use CompressedTexSubImage to update the content region
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, newInternalFormat, backingWidths[texIndex], backingHeights[texIndex], 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+			
+			internalFormats[texIndex] = newInternalFormat;
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, textures[texIndex]);
+		}
+		
+		glTextureRangeAPPLE(GL_TEXTURE_2D, newDataLength, baseAddress);
+		//glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+		
+		glCompressedTexSubImage2D(GL_TEXTURE_2D,
+								  0,
+								  0,
+								  0,
+								  roundedWidth,
+								  roundedHeight,
+								  newInternalFormat,
+								  newDataLength,
+								  baseAddress);
+		
+		cinder::gl::checkError();
+	}
+}
+- (HapDecoderFrame *) decodedFrame	{
+	return decodedFrame;
+}
+
+- (int) textureCount
+{
+	return textureCount;
+}
+- (GLuint *)textureNames
+{
+	if (!valid) return 0;
+	return textures;
+}
+
+- (GLuint)width
+{
+	if (valid) return width;
+	else return 0;
+}
+
+- (GLuint)height
+{
+	if (valid) return height;
+	else return 0;
+}
+
+- (GLuint*)textureWidths
+{
+	if (!valid) return 0;
+	return backingWidths;
+}
+
+- (GLuint*)textureHeights
+{
+	if (!valid) return 0;
+	return backingHeights;
+}
+@end
+
+#endif // USE_HAP
 
 #endif // defined( CINDER_COCOA_TOUCH ) || ( defined( CINDER_MAC ) && ( MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 ) )

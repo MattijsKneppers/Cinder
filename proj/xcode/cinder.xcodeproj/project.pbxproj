@@ -1583,10 +1583,42 @@
 		C7BA408B0FA8C13A00AADC07 /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA408A0FA8C13A00AADC07 /* AudioUnit.framework */; };
 		C7BA408D0FA8C13A00AADC07 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA408C0FA8C13A00AADC07 /* CoreAudio.framework */; };
 		D2AAC088055469A000DB518D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7B1FEA5585E11CA2CBB /* Cocoa.framework */; };
+		D42422E11F058E2C0085BAEA /* HapInAVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D42422DA1F058DC00085BAEA /* HapInAVFoundation.framework */; };
 		D8A5A81A19BFDE8700811132 /* CaptureImplAvFoundation.mm in Sources */ = {isa = PBXBuildFile; fileRef = C7FA5FC112124A790065683B /* CaptureImplAvFoundation.mm */; };
 		EAC3D1A91011F2E700FFBC9E /* Serial.h in Headers */ = {isa = PBXBuildFile; fileRef = EAC3D1A81011F2E700FFBC9E /* Serial.h */; };
 		EAC3D1AD1011F3AC00FFBC9E /* Serial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EAC3D1AB1011F3AC00FFBC9E /* Serial.cpp */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D42422D91F058DC00085BAEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A97F5AB1A38ABBF00E0DC74;
+			remoteInfo = HapInAVFoundation;
+		};
+		D42422DB1F058DC00085BAEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A3230141A3BA14000DDB2E0;
+			remoteInfo = "HapInAVF Test App";
+		};
+		D42422DD1F058DC00085BAEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A3BABFD1A65239C0065403A;
+			remoteInfo = "AVF Batch Converter";
+		};
+		D42422DF1F058DDF0085BAEA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A97F5AA1A38ABBF00E0DC74;
+			remoteInfo = HapInAVFoundation;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0003F3BE1992D64100647C8B /* Batch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Batch.cpp; path = gl/Batch.cpp; sourceTree = "<group>"; };
@@ -2299,6 +2331,7 @@
 		C7FA5FC512124B1C0065683B /* CaptureImplAvFoundation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CaptureImplAvFoundation.h; sourceTree = "<group>"; };
 		D2AAC07E0554694100DB518D /* libcinder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libcinder.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F7E8BE07B2D77200F64583 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+		D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = HapInAVFoundation.xcodeproj; path = ../../src/hapinavf/HapInAVFoundation.xcodeproj; sourceTree = "<group>"; };
 		EAC3D1A81011F2E700FFBC9E /* Serial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Serial.h; sourceTree = "<group>"; };
 		EAC3D1AB1011F3AC00FFBC9E /* Serial.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Serial.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -2340,6 +2373,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D42422E11F058E2C0085BAEA /* HapInAVFoundation.framework in Frameworks */,
 				5391FE660E95CB01002A13D5 /* AppKit.framework in Frameworks */,
 				D2AAC088055469A000DB518D /* Cocoa.framework in Frameworks */,
 				0091D8F10E81B9110029341E /* OpenGL.framework in Frameworks */,
@@ -3313,6 +3347,7 @@
 		32C88DFF0371C24200C91783 /* Other Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D42422D01F058DA80085BAEA /* hapinavf */,
 				B3EA3ED51DD0EE4F00E34348 /* freetype */,
 				B322C4391DC7DC4E00D2E661 /* zlib */,
 				11316E581B28AC1300BD8783 /* tinyexr */,
@@ -3786,6 +3821,24 @@
 				111A5FA6191F72AE005C3166 /* WaveTable.cpp */,
 			);
 			path = audio;
+			sourceTree = "<group>";
+		};
+		D42422D01F058DA80085BAEA /* hapinavf */ = {
+			isa = PBXGroup;
+			children = (
+				D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */,
+			);
+			name = hapinavf;
+			sourceTree = "<group>";
+		};
+		D42422D21F058DBF0085BAEA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D42422DA1F058DC00085BAEA /* HapInAVFoundation.framework */,
+				D42422DC1F058DC00085BAEA /* HapInAVF Test App.app */,
+				D42422DE1F058DC00085BAEA /* AVF Batch Converter.app */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -4657,6 +4710,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D42422E01F058DDF0085BAEA /* PBXTargetDependency */,
 			);
 			name = cinder;
 			productName = cinder;
@@ -4684,6 +4738,12 @@
 			mainGroup = 0867D691FE84028FC02AAC07 /* libcinder */;
 			productRefGroup = 034768DFFF38A50411DB9C8B /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = D42422D21F058DBF0085BAEA /* Products */;
+					ProjectRef = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				D2AAC07D0554694100DB518D /* cinder */,
@@ -4692,6 +4752,30 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		D42422DA1F058DC00085BAEA /* HapInAVFoundation.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = HapInAVFoundation.framework;
+			remoteRef = D42422D91F058DC00085BAEA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D42422DC1F058DC00085BAEA /* HapInAVF Test App.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "HapInAVF Test App.app";
+			remoteRef = D42422DB1F058DC00085BAEA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D42422DE1F058DC00085BAEA /* AVF Batch Converter.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "AVF Batch Converter.app";
+			remoteRef = D42422DD1F058DC00085BAEA /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
 		27C100081BD16D4800AF387F /* Sources */ = {
@@ -5470,6 +5554,14 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		D42422E01F058DDF0085BAEA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = HapInAVFoundation;
+			targetProxy = D42422DF1F058DDF0085BAEA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		1DEB921F08733DC00010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -5497,6 +5589,9 @@
 					../../include/jsoncpp,
 					../../include/oggvorbis,
 					../../include/freetype,
+					../../src/hapinavf,
+					../../src/hapinavf/source,
+					../../src/hapinavf/external/hap,
 				);
 				INSTALL_PATH = /usr/local/lib;
 				LINK_WITH_STANDARD_LIBRARIES = NO;
@@ -5540,6 +5635,9 @@
 					../../include/jsoncpp,
 					../../include/oggvorbis,
 					../../include/freetype,
+					../../src/hapinavf,
+					../../src/hapinavf/source,
+					../../src/hapinavf/external/hap,
 				);
 				INSTALL_PATH = /usr/local/lib;
 				LINK_WITH_STANDARD_LIBRARIES = NO;
