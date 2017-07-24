@@ -804,6 +804,74 @@ ci::gl::GlslProgRef loadShaderProg(std::string vertexName, std::string fragmentN
 		return NULL;
 	}
 }
+	
+std::string passTextureVertexShader() {
+	std::string s =
+	"	#version 150\n"
+	
+	"	uniform mat4	ciModelViewProjection;\n"
+	"	in vec4			ciPosition;\n"
+	"	in vec2			ciTexCoord0;\n"
+	
+	"	out vec2        texCoord0;\n"
+	
+	"	void main()\n"
+	"	{\n"
+	"		texCoord0 = ciTexCoord0;\n"
+		
+	"		gl_Position = ciModelViewProjection * ciPosition;\n"
+	"	}\n";
+	
+	return s;
+}
+	
+std::string passTextureFragmentShader() {
+	std::string s =
+	
+	"	#version 150\n"
+	
+	"	uniform sampler2D tex0;\n"
+	
+	"	in vec2	texCoord0;\n"
+	"	out vec4 outColor;\n"
+	
+	"	void main() {\n"
+	"		outColor = texture(tex0, texCoord0);\n"
+	"	}\n";
+
+	return s;
+}
+	
+std::string hapCoCgYToRGBAShader()
+{
+	std::string s =
+	"	#version 150\n"
+
+	"	uniform sampler2D cocgsy_src;\n"
+	
+	"	in vec2	texCoord0;\n"
+	"	out vec4 outColor;\n"
+	
+	"	const vec4 offsets = vec4(-0.50196078431373, -0.50196078431373, 0.0, 0.0);\n"
+	
+	"	void main()\n"
+	"	{\n"
+	"		vec4 CoCgSY = texture(cocgsy_src, texCoord0);\n"
+		
+	"		CoCgSY += offsets;\n"
+		
+	"		float scale = ( CoCgSY.z * ( 255.0 / 8.0 ) ) + 1.0;\n"
+		
+	"		float Co = CoCgSY.x / scale;\n"
+	"		float Cg = CoCgSY.y / scale;\n"
+	"		float Y = CoCgSY.w;\n"
+		
+	"		vec4 rgba = vec4(Y + Co - Cg, Y + Cg, Y - Co - Cg, 1.0);\n"
+		
+	"		outColor = rgba;\n"
+	"	}\n";
+	return s;
+}
 
 void MovieBase::updateFrame()
 {
@@ -838,16 +906,16 @@ void MovieBase::updateFrame()
 			OSType codecSubType = [dxtFrame codecSubType];
 			if (!mHapShader) {
 				if (codecSubType == kHapYCoCgCodecSubType) {
-					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader = gl::GlslProg::create(gl::GlslProg::Format().vertex( passTextureVertexShader() ).fragment( hapCoCgYToRGBAShader() ));
 					mHapShader->uniform( "cocgsy_src", 0 );
 				}
 				else if (codecSubType == kHapYCoCgACodecSubType) {
 					// TODO: YCoCgAlpha
-					mHapShader = loadShaderProg("pass.vert", "hapCoCgYToRGBA.frag");
+					mHapShader = gl::GlslProg::create(gl::GlslProg::Format().vertex( passTextureVertexShader() ).fragment( hapCoCgYToRGBAShader() ));
 					mHapShader->uniform( "cocgsy_src", 0 );
 				}
 				else {
-					mHapShader = loadShaderProg("pass.vert", "pass.frag");
+					mHapShader = gl::GlslProg::create(gl::GlslProg::Format().vertex( passTextureVertexShader() ).fragment( passTextureFragmentShader() ));
 				}
 			}
 			
