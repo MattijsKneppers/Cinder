@@ -220,6 +220,7 @@ MovieBase::~MovieBase()
 	}
 
 	if( mPlayerVideoOutput ) {
+		[mPlayerVideoOutput setDelegate:nil queue:nil];
 		[mPlayerVideoOutput release];
 	}
 }
