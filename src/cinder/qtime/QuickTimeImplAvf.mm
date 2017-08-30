@@ -324,8 +324,9 @@ bool MovieBase::seekToTime( float seconds )
 
 void MovieBase::seekToFrame( int frame )
 {
-	if( ! mPlayer )
+	if( ! mPlayer || ! mPlayerItem || !mPlayable || mPlayer.status != AVPlayerStatusReadyToPlay ) {
 		return;
+	}
 	
 	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, [mAsset duration].timescale);
 	CMTime startTime = kCMTimeZero;
