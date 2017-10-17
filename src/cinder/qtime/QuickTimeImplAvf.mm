@@ -266,8 +266,7 @@ float MovieBase::getPixelAspectRatio() const
 bool MovieBase::checkPlaythroughOk()
 {
 #ifdef USE_HAP
-	if(mHapLoaded)
-		return true;
+	if (mHapLoaded) return true;
 #endif
 	mPlayThroughOk = [mPlayerItem isPlaybackLikelyToKeepUp];
 	
@@ -669,6 +668,13 @@ void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 	allocateVisualContext();
 }
 
+NSMutableArray *supportedFormats = [NSMutableArray arrayWithObjects:@"ap4h",@"jpeg", @"Hap5", @"HapY", @"avc1",nil];
+	
+bool MovieBase::isFormatSupported(AVAsset* asset) {
+	NSString* format = getVideoFormat(asset);
+	return [supportedFormats containsObject: format];
+}
+	
 void MovieBase::loadAsset()
 {
 //	app::console() << "loading asset. video only is " << (videoOnly ? "on" : "off")  << ", seamless segments is " << (seamlessSegments ? "on" : "off") << std::endl;
@@ -676,40 +682,34 @@ void MovieBase::loadAsset()
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
 		
+		NSString* format = getVideoFormat(mAsset);
+//		NSLog(@"format %@", getVideoFormat(mAsset)); // TODO: check if this format is supported
+		
+
 		if (videoOnly) {
 			NSArray<AVAssetTrack *> *videoTracks = [mAsset tracksWithMediaType:AVMediaTypeVideo];
 			if (videoTracks.count > 0) {
 				AVAssetTrack *videoTrack = [videoTracks objectAtIndex:0];
+				
+#ifdef USE_HAP
+				if(!([format rangeOfString:@"Hap"].location == NSNotFound)) {
+					seamlessSegments = false;
+					mHapLoaded = true;
+					/*if([format compare:@"HapY"] == NSOrderedSame) {
+						mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
+					}
+					else {
+						mHapBitmapType = 0;
+					}*/
+				}
+#endif
+				
 				CMTime videoDuration = mAsset.duration;
 				
 				AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 				AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
 
-#ifdef USE_HAP
-				mHapLoaded = false;
-				NSArray	*trackFormatDescs = [videoTrack formatDescriptions];
-				CMFormatDescriptionRef	desc = (trackFormatDescs==nil || [trackFormatDescs count]<1) ? nil : (CMFormatDescriptionRef)[trackFormatDescs objectAtIndex:0];
-				if (desc!=nil) {
-					OSType		fourcc = CMFormatDescriptionGetMediaSubType(desc);
-					char		destChars[5];
-					destChars[0] = (fourcc>>24) & 0xFF;
-					destChars[1] = (fourcc>>16) & 0xFF;
-					destChars[2] = (fourcc>>8) & 0xFF;
-					destChars[3] = (fourcc) & 0xFF;
-					destChars[4] = 0;
-					NSString *descString = [NSString stringWithCString:destChars encoding:NSASCIIStringEncoding];
-					if(!([descString rangeOfString:@"Hap"].location == NSNotFound)) {
-						seamlessSegments = false;
-						mHapLoaded = true;
-						/*if([descString compare:@"HapY"] == NSOrderedSame) {
-							mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
-						}
-						else {
-							mHapBitmapType = 0;
-						}*/
-					}
-				}
-#endif
+				bool foundError = false;
 				if (seamlessSegments) {
 					
 					float offset = 0;
@@ -723,7 +723,10 @@ void MovieBase::loadAsset()
 	//					app::console() << "Adding segment from " << segment.first << " of duration " << (segment.second - segment.first) << " starting at " << offset << std::endl;
 						NSError *err;
 						bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
-						if (!success) app::console() << "Adding segment of time failed: " << err << std::endl;
+						if (!success) {
+							app::console() << "Adding segment of time failed: " << err << std::endl;
+							foundError = true;
+						}
 						
 	//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
 						
@@ -735,11 +738,14 @@ void MovieBase::loadAsset()
 					// add full video track once.
 					NSError *err;
 					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
-					if (!success) app::console() << "Adding video track failed: " << err << std::endl;
+					if (!success) {
+						app::console() << "Adding video track failed: " << err << std::endl;
+						foundError = true;
+					}
 				}
 				AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
 				mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
-				mLoaded = true;
+				mLoaded = !foundError;
 			}
 			else {
 				app::console() << "Loading video failed: no video track available" << std::endl;
@@ -956,10 +962,96 @@ uint32_t MovieBase::countFrames() const
 	return static_cast<uint32_t>(dur_seconds / one_frame_seconds);
 }
 
+static NSString * FourCCString(FourCharCode code) {
+	NSString *result = [NSString stringWithFormat:@"%c%c%c%c",
+						(code >> 24) & 0xff,
+						(code >> 16) & 0xff,
+						(code >> 8) & 0xff,
+						code & 0xff];
+	NSCharacterSet *characterSet = [NSCharacterSet whitespaceCharacterSet];
+	return [result stringByTrimmingCharactersInSet:characterSet];
+}
+	
+NSString* MovieBase::getVideoFormat(AVAsset* asset) {
+	NSArray<AVAssetTrack *>* videoTracks = [asset tracksWithMediaType:AVMediaTypeVideo];
+	
+	NSMutableString *format = [[NSMutableString alloc] init];
+	for (int i = 0; i < videoTracks.count; i++) {
+		AVAssetTrack *assetTrack = videoTracks[i];
+
+		NSArray	*descs = [assetTrack formatDescriptions];
+		if (descs != nil) {
+			for (int j = 0; j < assetTrack.formatDescriptions.count; j++) {
+				CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef) assetTrack.formatDescriptions[i];
+				
+				NSString *subType = FourCCString(CMFormatDescriptionGetMediaSubType(desc)); // Get String representation media subtype (avc1, aac, tx3g, etc.)
+				[format appendString: subType];
+				
+				// Comma separate if more than one format description
+				if (j < assetTrack.formatDescriptions.count - 1) {
+					[format appendString:@","];
+				}
+			}
+		}
+		else {
+			[format appendString: @"NoDescription"];
+		}
+	}
+	return format;
+}
+	
+std::string MovieBase::getMediaFormatString() {
+	if (mAsset == NULL) return "NotLoaded";
+	
+	NSArray<AVAssetTrack *>* assetTracks = [mAsset tracks];
+	
+	NSMutableString *format = [[NSMutableString alloc] init];
+	for (int i = 0; i < assetTracks.count; i++) {
+		AVAssetTrack *assetTrack = assetTracks[i];
+		
+//		for (id formatDescription in assetTrack.formatDescriptions) NSLog(@"formatDescription:  %@", formatDescription);
+		
+		NSArray	*descs = [assetTrack formatDescriptions];
+		if (descs != nil) {
+			
+			for (int j = 0; j < descs.count; j++) {
+				CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef) assetTrack.formatDescriptions[j];
+				
+			    NSString *type = FourCCString(CMFormatDescriptionGetMediaType(desc)); // Get String representation of media type (vide, soun, sbtl, etc.)
+				NSString *subType = FourCCString(CMFormatDescriptionGetMediaSubType(desc)); // Get String representation media subtype (avc1, aac, tx3g, etc.)
+
+				if([type compare:@"vide"] == NSOrderedSame) {
+					CFDictionaryRef inputFormatDescriptionExtension = CMFormatDescriptionGetExtensions(desc);
+					CFTypeRef formatName = CFDictionaryGetValue(inputFormatDescriptionExtension, kCMFormatDescriptionExtension_FormatName);
+
+					[format appendFormat:@"%@ (%@)", formatName, subType];
+				}
+				else {
+					[format appendFormat:@"%@", subType];
+				}
+				// Comma separate if more than one format description
+				if (j < assetTrack.formatDescriptions.count - 1) {
+					[format appendString:@", "];
+				}
+			}
+		}
+		else {
+			[format appendString: @"NoDescription"];
+		}
+		
+		// Separate if more than one asset track
+		if (i < assetTracks.count - 1) {
+			[format appendString:@" / "];
+		}
+	}
+	return std::string([format UTF8String]);;
+}
+	
 void MovieBase::processAssetTracks( AVAsset* asset )
 {
 	// process video tracks
-	NSArray* videoTracks = [asset tracksWithMediaType:AVMediaTypeVideo];
+	NSArray<AVAssetTrack *>* videoTracks = [asset tracksWithMediaType:AVMediaTypeVideo];
+	
 	mHasVideo = [videoTracks count] > 0;
 	if( mHasVideo ) {
 		AVAssetTrack* videoTrack = [videoTracks firstObject];
@@ -978,7 +1070,7 @@ void MovieBase::processAssetTracks( AVAsset* asset )
 	
 	if (!videoOnly) {
 	// process audio tracks
-	NSArray* audioTracks = [asset tracksWithMediaType:AVMediaTypeAudio];
+		NSArray* audioTracks = [asset tracksWithMediaType:AVMediaTypeAudio];
 		mHasAudio = [audioTracks count] > 0;
 #if defined( CINDER_COCOA_TOUCH )
 		if( mHasAudio ) {

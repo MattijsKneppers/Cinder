@@ -173,6 +173,8 @@ class MovieBase {
 	signals::Signal<void(bool)>&	getSeekDoneSignal() { return mSignalSeekDone; }
 	signals::Signal<void(bool)>&	getPrerollDoneSignal() { return mSignalPrerollDone; }
 	
+	std::string getMediaFormatString();
+	
  protected:
 	MovieBase();
 	void init();
@@ -217,10 +219,10 @@ class MovieBase {
 	
 	AVPlayer*					mPlayer;
 	AVPlayerItem*				mPlayerItem;
-	AVURLAsset*					mAsset;
+	AVURLAsset*					mAsset = NULL;
 #ifdef USE_HAP
 	AVPlayerItemHapDXTOutput*	mPlayerHapOutput;
-	HapPixelBufferTexture*		mHapTexture = nullptr;
+	HapPixelBufferTexture*		mHapTexture = NULL;
 	gl::GlslProgRef				mHapShader;
 	gl::FboRef					mHapFBO;
 	bool						mHapLoaded = false;
@@ -242,6 +244,9 @@ class MovieBase {
 	friend class MovieResponder;
 	MovieResponder* mResponder;
 	MovieDelegate* mPlayerDelegate;
+	
+	bool isFormatSupported(AVAsset* asset);
+	NSString* getVideoFormat(AVAsset* asset);
 };
 
 typedef std::shared_ptr<class MovieSurface> MovieSurfaceRef;
