@@ -92,6 +92,8 @@ class MovieBase {
 	
 	//! Returns whether the movie has loaded and buffered enough to playback without interruption
 	bool		checkPlaythroughOk();
+	//! Returns whether the movie media format is supported
+	bool		isSupported() const { return mFormatSupported; }
 	//! Returns whether the movie is in a loaded state, implying its structures are ready for reading but it may not be ready for playback
 	bool		isLoaded() const { return mLoaded; }
 	//! Returns whether the movie is playable, implying the movie is fully formed and can be played but media data is still downloading
@@ -208,6 +210,7 @@ class MovieBase {
 	float						mFrameRate;
 	float						mDuration;
 	std::atomic<bool>			mAssetLoaded;
+	bool						mFormatSupported = true;
 	bool						mLoaded, mPlayThroughOk, mPlayable, mProtected;
 	bool						mPlayingForward, mLoop, mPalindrome;
 	bool						mHasAudio, mHasVideo;
@@ -247,6 +250,10 @@ class MovieBase {
 	
 	bool isFormatSupported(AVAsset* asset);
 	NSString* getVideoFormat(AVAsset* asset);
+	
+private:
+	void findMediaFormatString(AVAsset* asset);
+	std::string mMediaFormatString = "NotLoaded";
 };
 
 typedef std::shared_ptr<class MovieSurface> MovieSurfaceRef;

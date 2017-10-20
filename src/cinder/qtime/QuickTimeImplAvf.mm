@@ -679,6 +679,14 @@ void MovieBase::loadAsset()
 {
 //	app::console() << "loading asset. video only is " << (videoOnly ? "on" : "off")  << ", seamless segments is " << (seamlessSegments ? "on" : "off") << std::endl;
 	
+    mFormatSupported = isFormatSupported(mAsset);
+    findMediaFormatString(mAsset);
+    
+	if (!mFormatSupported) {
+		mAssetLoaded = true;
+		return;
+	}
+    
 	NSArray* keyArray = [NSArray arrayWithObjects:@"tracks", @"duration", @"playable", @"hasProtectedContent", nil];
 	[mAsset loadValuesAsynchronouslyForKeys:keyArray completionHandler:^{
 		
@@ -692,15 +700,11 @@ void MovieBase::loadAsset()
 				AVAssetTrack *videoTrack = [videoTracks objectAtIndex:0];
 				
 #ifdef USE_HAP
-				if(!([format rangeOfString:@"Hap"].location == NSNotFound)) {
+				if([format rangeOfString:@"Hap"].location != NSNotFound) {
 					seamlessSegments = false;
 					mHapLoaded = true;
-					/*if([format compare:@"HapY"] == NSOrderedSame) {
-						mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
-					}
-					else {
-						mHapBitmapType = 0;
-					}*/
+					// if([format compare:@"HapY"] == NSOrderedSame) mHapBitmapType = JIT_BITMAP_TYPE_YCoCg_DXT5;
+					// else mHapBitmapType = 0;
 				}
 #endif
 				
@@ -1000,37 +1004,30 @@ NSString* MovieBase::getVideoFormat(AVAsset* asset) {
 	return format;
 }
 	
-std::string MovieBase::getMediaFormatString() {
-	if (mAsset == NULL) return "NotLoaded";
+void MovieBase::findMediaFormatString(AVAsset* asset) {
+	if (asset == NULL) return;
 	
-	NSArray<AVAssetTrack *>* assetTracks = [mAsset tracks];
-	
-	NSMutableString *format = [[NSMutableString alloc] init];
-	for (int i = 0; i < assetTracks.count; i++) {
-		AVAssetTrack *assetTrack = assetTracks[i];
+    NSMutableString *format = [[NSMutableString alloc] init];
+
+	// add video codec
+	NSArray<AVAssetTrack *>* videoTracks = [asset tracksWithMediaType: AVMediaTypeVideo];
+	for (int i = 0; i < videoTracks.count; i++) {
+		AVAssetTrack *videoTrack = videoTracks[i];
 		
-//		for (id formatDescription in assetTrack.formatDescriptions) NSLog(@"formatDescription:  %@", formatDescription);
+		//        for (id formatDescription in assetTrack.formatDescriptions) NSLog(@"formatDescription:  %@", formatDescription);
 		
-		NSArray	*descs = [assetTrack formatDescriptions];
+		NSArray    *descs = [videoTrack formatDescriptions];
 		if (descs != nil) {
-			
 			for (int j = 0; j < descs.count; j++) {
-				CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef) assetTrack.formatDescriptions[j];
+				CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef) videoTrack.formatDescriptions[j];
 				
-			    NSString *type = FourCCString(CMFormatDescriptionGetMediaType(desc)); // Get String representation of media type (vide, soun, sbtl, etc.)
-				NSString *subType = FourCCString(CMFormatDescriptionGetMediaSubType(desc)); // Get String representation media subtype (avc1, aac, tx3g, etc.)
+				CFDictionaryRef inputFormatDescriptionExtension = CMFormatDescriptionGetExtensions(desc);
+				CFTypeRef formatName = CFDictionaryGetValue(inputFormatDescriptionExtension, kCMFormatDescriptionExtension_FormatName);
+				
+				[format appendFormat:@"%@", formatName];
 
-				if([type compare:@"vide"] == NSOrderedSame) {
-					CFDictionaryRef inputFormatDescriptionExtension = CMFormatDescriptionGetExtensions(desc);
-					CFTypeRef formatName = CFDictionaryGetValue(inputFormatDescriptionExtension, kCMFormatDescriptionExtension_FormatName);
-
-					[format appendFormat:@"%@ (%@)", formatName, subType];
-				}
-				else {
-					[format appendFormat:@"%@", subType];
-				}
 				// Comma separate if more than one format description
-				if (j < assetTrack.formatDescriptions.count - 1) {
+				if (j < videoTrack.formatDescriptions.count - 1) {
 					[format appendString:@", "];
 				}
 			}
@@ -1040,11 +1037,43 @@ std::string MovieBase::getMediaFormatString() {
 		}
 		
 		// Separate if more than one asset track
-		if (i < assetTracks.count - 1) {
+		if (i < videoTracks.count - 1) {
 			[format appendString:@" / "];
 		}
 	}
-	return std::string([format UTF8String]);;
+	
+	// append type descriptors
+	[format appendString:@" ("];
+	NSArray<AVAssetTrack *>* assetTracks = [asset tracks];
+    for (int i = 0; i < assetTracks.count; i++) {
+        AVAssetTrack *assetTrack = assetTracks[i];
+		
+        NSArray    *descs = [assetTrack formatDescriptions];
+        if (descs != nil) {
+            for (int j = 0; j < descs.count; j++) {
+                CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef) assetTrack.formatDescriptions[j];
+                
+                NSString *subType = FourCCString(CMFormatDescriptionGetMediaSubType(desc)); // Get String representation media subtype (avc1, aac, tx3g, etc.)
+                
+				[format appendFormat:@"%@", subType];
+                // Comma separate if more than one format description
+                if (j < assetTrack.formatDescriptions.count - 1) {
+                    [format appendString:@", "];
+                }
+            }
+        }
+		
+        // Separate if more than one asset track
+        if (i < assetTracks.count - 1) {
+            [format appendString:@" / "];
+        }
+    }
+	[format appendString:@")"];
+    mMediaFormatString = std::string([format UTF8String]);;
+}
+    
+std::string MovieBase::getMediaFormatString() {
+    return mMediaFormatString;
 }
 	
 void MovieBase::processAssetTracks( AVAsset* asset )
