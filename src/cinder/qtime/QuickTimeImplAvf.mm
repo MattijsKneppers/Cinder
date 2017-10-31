@@ -313,8 +313,7 @@ bool MovieBase::seekToTime( float seconds )
 		return false;
 	}
 	
-//	app::console() << " seeking to time " << seconds << ", using timescale " << [mPlayer currentTime].timescale << std::endl;
-	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mAsset duration].timescale);
+	CMTime seek_time = CMTimeMakeWithSeconds(seconds, 1000);
 	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
 		mSignalSeekDone.emit(finished);
 	}];
@@ -327,7 +326,7 @@ void MovieBase::seekToFrame( int frame )
 		return;
 	}
 	
-	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, [mAsset duration].timescale);
+	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, 1000);
 	CMTime startTime = kCMTimeZero;
 	CMTime addedFrame = CMTimeMultiply(oneFrame, frame);
 	CMTime added = CMTimeAdd(startTime, addedFrame);
@@ -364,9 +363,8 @@ void MovieBase::setActiveSegment( float startTime, float duration )
 	if( ! mPlayer || ! mPlayerItem )
 		return;
 	
-	int32_t scale = [mPlayer currentTime].timescale;
-	CMTime cm_start = CMTimeMakeWithSeconds(startTime, scale);
-	CMTime cm_duration = CMTimeMakeWithSeconds(startTime + duration, scale);
+	CMTime cm_start = CMTimeMakeWithSeconds(startTime, 1000);
+	CMTime cm_duration = CMTimeMakeWithSeconds(startTime + duration, 1000);
 	
 	if (mPlayingForward) {
 		[mPlayer seekToTime:cm_start];
@@ -718,10 +716,10 @@ void MovieBase::loadAsset()
 					
 					float offset = 0;
 					for (auto segment : segments) {
-						CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, videoDuration.timescale);
-						CMTime segmentDuration = CMTimeMakeWithSeconds(segment.second - segment.first, videoDuration.timescale);
+						CMTime segmentStartTime = CMTimeMakeWithSeconds(segment.first, 1000);
+						CMTime segmentDuration = CMTimeMakeWithSeconds(segment.second - segment.first, 1000);
 						
-						CMTime offsetTime = CMTimeMakeWithSeconds(offset, videoDuration.timescale);
+						CMTime offsetTime = CMTimeMakeWithSeconds(offset, 1000);
 
 						// Then add segments from loop start to loop end.
 	//					app::console() << "Adding segment from " << segment.first << " of duration " << (segment.second - segment.first) << " starting at " << offset << std::endl;
@@ -960,7 +958,7 @@ uint32_t MovieBase::countFrames() const
 		return 0;
 	
 	CMTime dur = [mAsset duration];
-	CMTime one_frame = ::CMTimeMakeWithSeconds( 1.0 / mFrameRate, dur.timescale );
+	CMTime one_frame = ::CMTimeMakeWithSeconds( 1.0 / mFrameRate, 1000 );
 	double dur_seconds = ::CMTimeGetSeconds( dur );
 	double one_frame_seconds = ::CMTimeGetSeconds( one_frame );
 	return static_cast<uint32_t>(dur_seconds / one_frame_seconds);
