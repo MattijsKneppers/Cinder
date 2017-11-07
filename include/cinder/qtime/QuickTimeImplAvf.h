@@ -95,6 +95,8 @@ class MovieBase {
 	//! Returns whether the movie media format is supported
 	bool		isSupported() const { return mFormatSupported; }
 	//! Returns whether the movie is in a loaded state, implying its structures are ready for reading but it may not be ready for playback
+	bool		isLoading() const { return !mAssetLoaded; }
+	//! Returns whether the movie is in a loaded state, implying its structures are ready for reading but it may not be ready for playback
 	bool		isLoaded() const { return mLoaded; }
 	//! Returns whether the movie is playable, implying the movie is fully formed and can be played but media data is still downloading
 	bool		isPlayable() const { return mPlayable; }
