@@ -208,6 +208,8 @@ MovieBase::~MovieBase()
 	// remove all observers
 	removeObservers();
 	
+	[mPlayer seekToTime:kCMTimeZero];
+	
 	// release resources for AVF objects.
 	if( mPlayer ) {
 		[mPlayer cancelPendingPrerolls];
@@ -726,7 +728,7 @@ void MovieBase::loadAsset()
 						NSError *err;
 						bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
 						if (!success) {
-							app::console() << "Adding segment of time failed: " << err << std::endl;
+							app::console() << "Adding segment of time failed: " << [err localizedDescription] << std::endl;
 							foundError = true;
 						}
 						
