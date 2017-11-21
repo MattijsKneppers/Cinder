@@ -45,6 +45,7 @@
 
 #include "cinder/qtime/QuickTimeImplAvf.h"
 #include "cinder/qtime/AvfUtils.h"
+#include "QTKit/QTMovieModernizer.h"
 
 #ifdef USE_HAP
 	#import <HapInAVFoundation/HapInAVFoundation.h>
@@ -668,11 +669,17 @@ void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 	allocateVisualContext();
 }
 
-NSMutableArray *supportedFormats = [NSMutableArray arrayWithObjects:@"ap4h",@"jpeg", @"Hap5", @"HapY", @"avc1",nil];
-	
-bool MovieBase::isFormatSupported(AVAsset* asset) {
+#ifdef USE_HAP
+	NSArray *hapFormats = [NSArray arrayWithObjects: @"Hap5",@"HapY",nil];
+#endif
+
+bool MovieBase::isFormatSupported(AVURLAsset* asset) {
+	bool isSupported = ![QTMovieModernizer requiresModernization:asset.URL error:nil];
+#ifdef USE_HAP
 	NSString* format = getVideoFormat(asset);
-	return [supportedFormats containsObject: format];
+	isSupported = isSupported || [hapFormats containsObject: format];
+#endif
+	return isSupported;
 }
 	
 void MovieBase::loadAsset()
@@ -976,7 +983,7 @@ static NSString * FourCCString(FourCharCode code) {
 	return [result stringByTrimmingCharactersInSet:characterSet];
 }
 	
-NSString* MovieBase::getVideoFormat(AVAsset* asset) {
+NSString* MovieBase::getVideoFormat(AVURLAsset* asset) {
 	NSArray<AVAssetTrack *>* videoTracks = [asset tracksWithMediaType:AVMediaTypeVideo];
 	
 	NSMutableString *format = [[NSMutableString alloc] init];

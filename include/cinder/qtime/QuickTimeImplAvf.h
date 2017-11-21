@@ -47,6 +47,7 @@ typedef CVBufferRef CVImageBufferRef;
 	@class NSURL;
 	@class NSDictionary;
 	@class HapPixelBufferTexture, AVPlayerItemHapDXTOutput;
+	@class QTMovieModernizer;
 #else
 	class AVPlayer;
 	class AVPlayerItem;
@@ -62,6 +63,7 @@ typedef CVBufferRef CVImageBufferRef;
 	class NSDictionary;
 	class HapPixelBufferTexture;
 	class AVPlayerItemHapDXTOutput;
+	class QTMovieModernizer;
 	// -- 
 	class MovieDelegate;
 #endif
@@ -250,8 +252,8 @@ class MovieBase {
 	MovieResponder* mResponder;
 	MovieDelegate* mPlayerDelegate;
 	
-	bool isFormatSupported(AVAsset* asset);
-	NSString* getVideoFormat(AVAsset* asset);
+	bool isFormatSupported(AVURLAsset* asset);
+	NSString* getVideoFormat(AVURLAsset* asset);
 	
 private:
 	void findMediaFormatString(AVAsset* asset);
