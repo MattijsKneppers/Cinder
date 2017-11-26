@@ -720,7 +720,6 @@ void MovieBase::loadAsset()
 				AVMutableComposition *mutableComposition = [AVMutableComposition composition];
 				AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
 
-				bool foundError = false;
 				if (seamlessSegments) {
 					
 					float offset = 0;
@@ -735,8 +734,10 @@ void MovieBase::loadAsset()
 						NSError *err;
 						bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
 						if (!success) {
-							foundError = true;
 							app::console() << "Adding segment of time failed: " << [[err localizedDescription] UTF8String] << std::endl;
+							mLoaded = false;
+							mAssetLoaded = true;
+							return;
 						}
 						
 	//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
@@ -750,13 +751,15 @@ void MovieBase::loadAsset()
 					NSError *err;
 					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
 					if (!success) {
-						foundError = true;
 						app::console() << "Adding video track failed: " << [[err localizedDescription] UTF8String] << std::endl;
+						mLoaded = false;
+						mAssetLoaded = true;
+						return;
 					}
 				}
 				AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
 				mPlayerItem = [AVPlayerItem playerItemWithAsset:immutableSnapshotOfMyComposition];
-				mLoaded = !foundError;
+				mLoaded = true;
 			}
 			else {
 				app::console() << "Loading video failed: no video track available" << std::endl;
