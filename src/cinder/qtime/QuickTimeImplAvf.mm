@@ -670,7 +670,7 @@ void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 }
 
 #ifdef USE_HAP
-	NSArray *hapFormats = [NSArray arrayWithObjects: @"Hap5",@"HapY",nil];
+	NSArray *hapFormats = [NSArray arrayWithObjects: @"Hap5",@"HapY",@"Hap1", nil];
 #endif
 
 bool MovieBase::isFormatSupported(AVURLAsset* asset) {
