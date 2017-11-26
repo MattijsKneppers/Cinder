@@ -735,8 +735,8 @@ void MovieBase::loadAsset()
 						NSError *err;
 						bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(segmentStartTime,segmentDuration) ofTrack:videoTrack atTime:offsetTime error:&err];
 						if (!success) {
-							app::console() << "Adding segment of time failed: " << [err localizedDescription] << std::endl;
 							foundError = true;
+							app::console() << "Adding segment of time failed: " << [[err localizedDescription] UTF8String] << std::endl;
 						}
 						
 	//					app::console() << "Duration now: " << CMTimeGetSeconds([mutableComposition duration]) << std::endl;
@@ -750,8 +750,8 @@ void MovieBase::loadAsset()
 					NSError *err;
 					bool success = [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoDuration) ofTrack:videoTrack atTime:kCMTimeZero error:&err];
 					if (!success) {
-						app::console() << "Adding video track failed: " << err << std::endl;
 						foundError = true;
+						app::console() << "Adding video track failed: " << [[err localizedDescription] UTF8String] << std::endl;
 					}
 				}
 				AVComposition* immutableSnapshotOfMyComposition = [mutableComposition copy];
