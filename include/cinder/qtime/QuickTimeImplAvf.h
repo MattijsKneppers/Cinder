@@ -126,7 +126,7 @@ class MovieBase {
 	//! Sets the movie to the time \a seconds
 	bool		seekToTime( float seconds );
 	//! Sets the movie time to the start time of frame \a frame
-	void		seekToFrame( int frame );
+	bool		seekToFrame( int frame );
 	//! Sets the movie time to its beginning
 	void		seekToStart();
 	//! Sets the movie time to its end

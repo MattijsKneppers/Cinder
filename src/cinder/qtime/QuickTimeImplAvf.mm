@@ -323,10 +323,10 @@ bool MovieBase::seekToTime( float seconds )
 	return true;
 }
 
-void MovieBase::seekToFrame( int frame )
+bool MovieBase::seekToFrame( int frame )
 {
 	if( ! mPlayer || ! mPlayerItem || !mPlayable || mPlayer.status != AVPlayerStatusReadyToPlay ) {
-		return;
+		return false;
 	}
 	
 	CMTime oneFrame = CMTimeMakeWithSeconds(1.0 / mFrameRate, 1000);
@@ -338,6 +338,7 @@ void MovieBase::seekToFrame( int frame )
 	[mPlayer seekToTime:added toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
 		mSignalSeekDone.emit(finished);
 	}];
+	return true;
 }
 
 void MovieBase::seekToStart()
