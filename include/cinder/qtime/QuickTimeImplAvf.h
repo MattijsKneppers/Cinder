@@ -181,6 +181,8 @@ class MovieBase {
 	
 	std::string getMediaFormatString();
 	
+	bool isHapMovie();
+	
  protected:
 	MovieBase();
 	void init();

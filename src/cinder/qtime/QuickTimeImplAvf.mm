@@ -1087,6 +1087,10 @@ std::string MovieBase::getMediaFormatString() {
     return mMediaFormatString;
 }
 	
+bool MovieBase::isHapMovie() {
+	return mHapLoaded;
+}
+	
 void MovieBase::processAssetTracks( AVAsset* asset )
 {
 	// process video tracks
