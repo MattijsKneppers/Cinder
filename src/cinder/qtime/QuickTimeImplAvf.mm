@@ -1012,7 +1012,9 @@ NSString* MovieBase::getVideoFormat(AVURLAsset* asset) {
 			[format appendString: @"NoDescription"];
 		}
 	}
-	return format;
+	NSString* result = [format copy];
+	[format release];
+	return result;
 }
 	
 void MovieBase::findMediaFormatString(AVAsset* asset) {
@@ -1081,6 +1083,7 @@ void MovieBase::findMediaFormatString(AVAsset* asset) {
     }
 	[format appendString:@")"];
     mMediaFormatString = std::string([format UTF8String]);;
+	[format release];
 }
     
 std::string MovieBase::getMediaFormatString() {
