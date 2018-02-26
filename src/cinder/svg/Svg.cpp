@@ -2181,6 +2181,17 @@ Doc::Doc( DataSourceRef dataSource, const fs::path &filePath )
 	loadDoc( dataSource, relativePath );
 }
 
+Doc::Doc( const std::string &string )
+: Group( 0 )
+{
+	loadString(string);
+}
+	
+DocRef Doc::create( const std::string &string )
+{
+	return DocRef( new svg::Doc( string ) );
+}
+
 DocRef Doc::create( const fs::path &filePath )
 {
 	return DocRef( new svg::Doc( filePath ) );
@@ -2202,15 +2213,10 @@ DocRef Doc::createFromSvgz( DataSourceRef dataSource, const fs::path &filePath )
 	
 	return DocRef( new svg::Doc( DataSourceBuffer::create( decompressed, relativePath ) ) );
 }
-
-void Doc::loadDoc( DataSourceRef source, fs::path filePath )
-{
-	if( ! filePath.empty() )
-		mFilePath = filePath.parent_path();
-	mXmlTree = shared_ptr<XmlTree>( new XmlTree( source, XmlTree::ParseOptions().ignoreDataChildren( false ) ) );
-
+	
+void Doc::parseTree() {
 	const XmlTree &xml( mXmlTree->getChild( "svg" ) );
-
+	
 	if( xml.hasAttribute( "viewBox" ) ) {
 		string vbox = xml.getAttributeValue<string>( "viewBox" );
 		const char *vbCPtr = vbox.c_str();
@@ -2240,7 +2246,7 @@ void Doc::loadDoc( DataSourceRef source, fs::path filePath )
 	}
 	else
 		mHeight = mViewBox.getHeight();
-
+	
 	bool needsViewBoxMapping = mViewBox.getWidth() > 0 && mViewBox.getHeight() > 0 && mWidth > 0 && mHeight > 0;
 	if( needsViewBoxMapping ) {
 		mat3 m33;
@@ -2251,12 +2257,26 @@ void Doc::loadDoc( DataSourceRef source, fs::path filePath )
 	}
 	else
 		mTransform = mat3();
-
+	
 	// we can't parse the group w/o having parsed the viewBox, dimensions, etc, so we have to do this manually:
 	if( xml.hasChild( "switch" ) )		// when saved with "preserve Illustrator editing capabilities", svg data is inside a "switch"
 		Group::parse( xml.getChild( "switch" ) );
 	else
 		Group::parse( xml );
+}
+	
+void Doc::loadString( std::string string )
+{
+	mXmlTree = shared_ptr<XmlTree>( new XmlTree( string, XmlTree::ParseOptions().ignoreDataChildren( false ) ) );
+	parseTree();
+}
+
+void Doc::loadDoc( DataSourceRef source, fs::path filePath )
+{
+	if( ! filePath.empty() )
+		mFilePath = filePath.parent_path();
+	mXmlTree = shared_ptr<XmlTree>( new XmlTree( source, XmlTree::ParseOptions().ignoreDataChildren( false ) ) );
+	parseTree();
 }
 
 shared_ptr<Surface8u> Doc::loadImage( fs::path relativePath )

@@ -783,10 +783,12 @@ class Doc : public Group {
 	Doc() : Group( 0 ), mWidth( 0 ), mHeight( 0 ) {}
 	Doc( const fs::path &filePath );
 	Doc( DataSourceRef dataSource, const fs::path &filePath = fs::path() );
+	Doc( const std::string &string );
 
 	static DocRef	create( const fs::path &filePath );
 	static DocRef	create( DataSourceRef dataSource, const fs::path &filePath = fs::path() );
 	static DocRef	createFromSvgz( DataSourceRef dataSource, const fs::path &filePath = fs::path() );
+	static DocRef	create( const std::string &string );
 
 	//! Returns the width of the document in pixels
 	int32_t		getWidth() const { return mWidth; }
@@ -808,6 +810,8 @@ class Doc : public Group {
 	//! Utility function to load an image relative to the document. Caches results.
 	std::shared_ptr<Surface8u>	loadImage( fs::path relativePath );
   private:
+	void	parseTree();
+	void 	loadString( std::string string );
   	void 	loadDoc( DataSourceRef source, fs::path filePath );
 
 	virtual void		renderSelf( Renderer &renderer ) const;
