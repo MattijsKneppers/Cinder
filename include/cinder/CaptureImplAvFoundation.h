@@ -24,6 +24,7 @@
 #include "cinder/Cinder.h"
 #include "cinder/Surface.h"
 #include "cinder/Capture.h"
+#include "cinder/gl/Texture.h"
 #import <AVFoundation/AVFoundation.h>
 #include <vector>
 
@@ -51,6 +52,7 @@ class CaptureImplAvFoundationDevice : public Capture::Device {
 	AVCaptureSession				*mSession;
 	CVPixelBufferRef				mWorkingPixelBuffer;
 	cinder::Surface8uRef			mCurrentFrame;
+	cinder::gl::TextureRef			mCurrentTexture;
 	NSString						*mDeviceUniqueId;
 	
 	cinder::Capture::DeviceRef		mDevice;
@@ -71,6 +73,7 @@ class CaptureImplAvFoundationDevice : public Capture::Device {
 - (void)stopCapture;
 - (bool)isCapturing;
 - (cinder::Surface8uRef)getCurrentFrame;
+- (cinder::gl::TextureRef)getCurrentFrameAsTexture;
 - (bool)checkNewFrame;
 - (const cinder::Capture::DeviceRef)getDevice;
 - (int32_t)getWidth;

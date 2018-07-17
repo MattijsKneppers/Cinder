@@ -299,6 +299,30 @@ static BOOL sDevicesEnumerated = false;
 	return mCurrentFrame;
 }
 
+- (cinder::gl::TextureRef)getCurrentFrameAsTexture
+{
+	if( ( ! mIsCapturing ) || ( ! mWorkingPixelBuffer ) ) {
+		return mCurrentTexture;
+	}
+	
+	@synchronized( self ) {
+		::CVPixelBufferLockBaseAddress( mWorkingPixelBuffer, 0 );
+		
+		uint8_t *data = (uint8_t *)::CVPixelBufferGetBaseAddress( mWorkingPixelBuffer );
+		mExposedFrameWidth = (int32_t)::CVPixelBufferGetWidth( mWorkingPixelBuffer );
+		mExposedFrameHeight = (int32_t)::CVPixelBufferGetHeight( mWorkingPixelBuffer );
+		
+		auto captureWorkingPixelBuffer = mWorkingPixelBuffer;
+		
+		mCurrentTexture = cinder::gl::Texture::create(data, GL_BGRA, mExposedFrameWidth, mExposedFrameHeight);
+		mCurrentTexture->setTopDown();
+		frameDeallocator( captureWorkingPixelBuffer );
+		
+		mWorkingPixelBuffer = nullptr;
+	}
+	return mCurrentTexture;
+}
+
 - (bool)checkNewFrame
 {
 	bool result;

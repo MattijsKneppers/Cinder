@@ -133,13 +133,15 @@ Surface8uRef Capture::getSurface() const
 	return mImpl->getSurface();
 #endif
 }
-
-#if defined( CINDER_ANDROID )
+	
 gl::Texture2dRef Capture::getTexture() const
 {
+#if defined( CINDER_COCOA )
+	return [mImpl getCurrentFrameAsTexture];
+#else
 	return mImpl->getTexture();
-}
 #endif
+}
 
 int32_t	Capture::getWidth() const { 
 #if defined( CINDER_COCOA )
