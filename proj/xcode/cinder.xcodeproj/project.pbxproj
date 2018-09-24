@@ -285,6 +285,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		CB05D8DD2158EED7006E9DAD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A4D2CCE207E47CD003FE56B;
+			remoteInfo = "HapInAVFoundation-static";
+		};
+		CB05D8DF2158EED7006E9DAD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1AABDE8A207E544000D8F504;
+			remoteInfo = AVFtoHap;
+		};
 		D42422D91F058DC00085BAEA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D42422D11F058DBF0085BAEA /* HapInAVFoundation.xcodeproj */;
@@ -2506,8 +2520,10 @@
 			isa = PBXGroup;
 			children = (
 				D42422DA1F058DC00085BAEA /* HapInAVFoundation.framework */,
+				CB05D8DE2158EED7006E9DAD /* libHapInAVFoundation.a */,
 				D42422DC1F058DC00085BAEA /* HapInAVF Test App.app */,
 				D42422DE1F058DC00085BAEA /* AVF Batch Converter.app */,
+				CB05D8E02158EED7006E9DAD /* AVFtoHap */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2568,6 +2584,20 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
+		CB05D8DE2158EED7006E9DAD /* libHapInAVFoundation.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libHapInAVFoundation.a;
+			remoteRef = CB05D8DD2158EED7006E9DAD /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		CB05D8E02158EED7006E9DAD /* AVFtoHap */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = AVFtoHap;
+			remoteRef = CB05D8DF2158EED7006E9DAD /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
 		D42422DA1F058DC00085BAEA /* HapInAVFoundation.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
