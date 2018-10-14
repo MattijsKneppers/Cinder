@@ -28,6 +28,7 @@
 
 #include <set>
 #include <vector>
+#include <map>
 
 namespace cinder { namespace gl {
 
@@ -49,6 +50,8 @@ class ShaderPreprocessor {
 	std::string		parse( const fs::path &sourcePath, std::set<fs::path> *includedFiles = nullptr );
 	//! Parses and processes the shader source \a source, which can be found at \a sourcePath. If \a includedFiles is provided, this will be filled with paths to any files detected as `#include`ed. \return a preprocessed source string.
 	std::string		parse( const std::string &source, const fs::path &sourcePath, std::set<fs::path> *includedFiles = nullptr );
+	//! Parses and processes the shader source \a source, in-lining #includes from the \a includes map, where keys are the file paths and values are the files' contents.
+	std::string		parse( const std::string &source, const std::map<std::string, std::string> includes);
 
 	//! Adds a custom search directory to the search list. The last directory added will be searched first.
 	void	addSearchDirectory( const fs::path &directory );
@@ -67,6 +70,8 @@ class ShaderPreprocessor {
   private:
 	std::string		parseTopLevel( const std::string &source, const fs::path &currentDirectory, std::set<fs::path> &includeTree );
 	std::string		parseRecursive( const fs::path &path, const fs::path &currentDirectory, std::set<fs::path> &includeTree );
+	std::string     parseTopLevel( const std::string &source, std::map<std::string, std::string> includes );
+	std::string     parseRecursive( const std::string &source, std::map<std::string, std::string> includes );
 	std::string		parseDirectives( const std::string &source );
 	fs::path		findFullPath( const fs::path &includePath, const fs::path &currentPath );
 

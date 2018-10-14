@@ -192,6 +192,10 @@ string ShaderPreprocessor::parse( const std::string &source, const fs::path &sou
 
 	return parseDirectives( parseTopLevel( source, sourcePath.parent_path(), *includedFiles ) );
 }
+	
+string ShaderPreprocessor::parse( const std::string &source, const map<string, string> includes) {
+	return parseDirectives( parseRecursive( source, includes ) );
+}
 
 std::string ShaderPreprocessor::parseDirectives( const std::string &source )
 {
@@ -295,6 +299,32 @@ string ShaderPreprocessor::parseRecursive( const fs::path &path, const fs::path 
 	return output.str();
 }
 
+string ShaderPreprocessor::parseRecursive( const string &source, map<string, string> includes )
+{
+    stringstream output;
+    istringstream input( source );
+    
+    // go through each line and process includes
+    string line;
+    
+    size_t lineNumber = 1;
+    
+    while( getline( input, line ) ) {
+        std::string includeFilePath;
+        if( findIncludeStatement( line, &includeFilePath ) ) {
+			if (includes.count(includeFilePath) == 0) throw ShaderPreprocessorExc( "Failed to find source in provided includes map for include: " + includeFilePath );
+			output << parseRecursive( includes[includeFilePath], includes );
+            output << "#line " << lineNumber << endl;
+        }
+        else
+            output << line;
+        
+        output << endl;
+        lineNumber++;
+    }
+    
+    return output.str();
+}
 
 void ShaderPreprocessor::addSearchDirectory( const fs::path &directory )
 {
