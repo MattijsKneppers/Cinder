@@ -28,20 +28,16 @@
 #include "cinder/gl/Texture.h"
 
 #include <map>
-#if defined( _MSC_VER ) && ( _MSC_VER >= 1600 ) || defined( _LIBCPP_VERSION ) || defined( __GLIBCXX__ )
-	#include <unordered_map>
-#else
-	#include <boost/unordered_map.hpp>
-#endif
+#include <unordered_map>
 
 namespace cinder { namespace gl {
 
 typedef std::shared_ptr<class TextureFont>	TextureFontRef;
 typedef std::shared_ptr<class GlslProg>		GlslProgRef;
 
-class TextureFont {
+class CI_API TextureFont {
   public:
-	class Format {
+	class CI_API Format {
 	  public:
 		Format() : mTextureWidth( 1024 ), mTextureHeight( 1024 ), mPremultiply( false ), mMipmapping( false )
 		{}
@@ -71,7 +67,7 @@ class TextureFont {
 		bool		mMipmapping;
 	};
 
-	struct DrawOptions {
+	struct CI_API DrawOptions {
 		DrawOptions() : mClipHorizontal( true ), mClipVertical( true ), mPixelSnap( true ), mLigate( false ), mScale( 1 ) {}
 
 		//! Returns whether the output clips horizontally
@@ -127,10 +123,8 @@ class TextureFont {
 
 	//! Returns the size in pixels necessary to render the string \a str with DrawOptions \a options.
 	vec2	measureString( const std::string &str, const DrawOptions &options = DrawOptions() ) const;
-#if defined( CINDER_COCOA )
 	//! Returns the size in pixels necessary to render the word-wrapped string \a str fit inside \a fitRect with DrawOptions \a options. Mac & iOS only.
 	vec2	measureStringWrapped( const std::string &str, const Rectf &fitRect, const DrawOptions &options = DrawOptions() ) const;
-#endif
     
 	//! Returns a vector of glyph/placement pairs representing \a str, suitable for use with drawGlyphs. Useful for caching placement and optimizing batching.
 	std::vector<std::pair<Font::Glyph,vec2> >		getGlyphPlacements( const std::string &str, const DrawOptions &options = DrawOptions() ) const;
@@ -153,21 +147,22 @@ class TextureFont {
 	//! Returns the default set of characters for a TextureFont, suitable for most English text, including some common ligatures and accented vowels.
 	//! \c "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890().?!,:;'\"&*=+-/\\@#_[]<>%^llflfiphridséáèà"
 	static std::string		defaultChars() { return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890().?!,:;'\"&*=+-/\\@#_[]<>%^llflfiphrids\303\251\303\241\303\250\303\240"; }
-
-  protected:
-	TextureFont( const Font &font, const std::string &supportedChars, const Format &format );
-
-	struct GlyphInfo {
+	
+	struct CI_API GlyphInfo {
 		uint8_t		mTextureIndex;
 		Area		mTexCoords;
 		vec2		mOriginOffset;
 	};
-	
-#if defined( _MSC_VER ) && ( _MSC_VER >= 1600 ) || defined( _LIBCPP_VERSION ) || defined( __GLIBCXX__ )
+
+	//! Returns the current set of characters along with its location into the set of textures
+	const std::unordered_map<Font::Glyph, GlyphInfo>& getGlyphMap() const { return mGlyphMap; }
+	//! Returns the vector of gl::TextureRef corresponding to each page of the atlas
+	const std::vector<gl::TextureRef>& getTextures() const { return mTextures; }
+
+  protected:
+	TextureFont( const Font &font, const std::string &supportedChars, const Format &format );
+
 	std::unordered_map<Font::Glyph, GlyphInfo>		mGlyphMap;
-#else
-	boost::unordered_map<Font::Glyph, GlyphInfo>	mGlyphMap;
-#endif
 	std::vector<gl::TextureRef>						mTextures;
 	Font											mFont;
 	Format											mFormat;

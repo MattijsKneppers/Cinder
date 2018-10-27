@@ -35,7 +35,7 @@ namespace cinder { namespace audio {
 typedef std::shared_ptr<class Device> DeviceRef;
 
 //! Object representing a hardware audio device. There is only ever one device per hardware device reported by the system, for both input and output.
-class Device : public std::enable_shared_from_this<Device>, Noncopyable {
+class CI_API Device : public std::enable_shared_from_this<Device>, Noncopyable {
   public:
 	virtual ~Device() {}
 
@@ -43,6 +43,10 @@ class Device : public std::enable_shared_from_this<Device>, Noncopyable {
 	static DeviceRef getDefaultOutput();
 	//! Returns a reference to the default input Device on your system.
 	static DeviceRef getDefaultInput();
+	//! Finds and returns a reference to the first Device named \a name that supports audio output.
+	static DeviceRef findOutputByName( const std::string &name );
+	//! Finds and returns a reference to the first Device named \a name that supports audio input.
+	static DeviceRef findInputByName( const std::string &name );
 	//! Finds and returns a reference to the first Device named \a name.
 	static DeviceRef findDeviceByName( const std::string &name );
 	//! Finds and returns a reference to the unique Device located by \a key, an platform-specific defined identifier.
@@ -106,11 +110,11 @@ class Device : public std::enable_shared_from_this<Device>, Noncopyable {
 };
 
 //! Platform-specific Singleton for managing hardware devices. Applications normally should not need to use this, but instead should use the equivalent methods from \a Device.
-class DeviceManager : private Noncopyable {
+class CI_API DeviceManager : private Noncopyable {
   public:
 	virtual ~DeviceManager() {}
 
-	virtual DeviceRef findDeviceByName( const std::string &name );
+	virtual DeviceRef findDeviceByName( const std::string &name, bool supportsOutput, bool supportsInput );
 	virtual DeviceRef findDeviceByKey( const std::string &key );
 
 	virtual const std::vector<DeviceRef>& getDevices()									= 0;
@@ -138,6 +142,10 @@ class DeviceManager : private Noncopyable {
 
 	void emitParamsWillChange( const DeviceRef &device );
 	void emitParamsDidChange( const DeviceRef &device );
+
+	//! Forces the cached samplerate and framesPerBlock values on a DeviceRef to be cleared so the next time they are
+	//! requested, the value comes from the DeviceManager impl
+	void clearCachedValues( const DeviceRef &device );
 
 	std::vector<DeviceRef> mDevices;
 

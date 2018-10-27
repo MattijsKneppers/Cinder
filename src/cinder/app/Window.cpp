@@ -114,12 +114,19 @@ void Window::spanAllDisplays()
 	setPos( spanning.getUL() );
 }
 
+ivec2 Window::getMousePos() const
+{
+	return app::AppBase::get()->getMousePos() - getPos();
+}
+
 float Window::getContentScale() const
 {
 	testValid();
 	
 #if defined( CINDER_COCOA )
 	return [mImpl getContentScale];
+#elif defined( CINDER_MSW_DESKTOP )
+	return mImpl->getContentScale();
 #else
 	return 1.0f;
 #endif

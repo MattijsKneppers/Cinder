@@ -34,7 +34,6 @@ using std::unique_ptr;
 #include <limits>
 #include <fstream>
 #include <algorithm>
-#include <boost/preprocessor/seq.hpp>
 
 namespace cinder { namespace ip {
 
@@ -189,13 +188,13 @@ void resample( const vector<const ChannelT<T>*> &srcChannels, const FilterBase &
 	xWeightPtr = xWeightBuffer;
 	for ( int32_t bx = 0; bx < dstWidth; bx++, xWeightPtr += filterParamsX.width ) {
 		xWeights[bx].weight = xWeightPtr;
-		makeWeightTable<T,typename SCALETRAIT<T>::SUMT>( bx, MAP(bx, m.sx, m.ux), filter, &filterParamsX, srcWidth, true, &xWeights[bx] );
+		makeWeightTable<T,typename SCALETRAIT<T>::SUMT>( MAP(bx, m.sx, m.ux), filter, &filterParamsX, srcWidth, true, &xWeights[bx] );
 	}
 
 	for( size_t chan = 0; chan < srcChannels.size(); ++chan ) {
 		for ( int32_t dstY = 0; dstY < dstHeight; ++dstY ) {     // loop over dest scanlines
 			// prepare a weight table for dest y position by
-			makeWeightTable<T,typename SCALETRAIT<T>::SUMT>( dstY, MAP(dstY, m.sy, m.uy), filter, &filterParamsY, srcHeight, false, &yWeights );
+			makeWeightTable<T,typename SCALETRAIT<T>::SUMT>( MAP(dstY, m.sy, m.uy), filter, &filterParamsY, srcHeight, false, &yWeights );
 
 			memset( accum.get(), 0, sizeof(int32_t) * dstWidth );
 
@@ -229,7 +228,7 @@ void scanlineAccumulate( LT weight, LT *lineBuffer, int32_t width, AT *accum )
 }
 
 template<typename T, typename WT>
-void makeWeightTable( int32_t b, float cen, const FilterBase &filter, const FilterParams *params, int32_t len, bool trimzeros, WeightTable<WT> *wtab )
+void makeWeightTable( float cen, const FilterBase &filter, const FilterParams *params, int32_t len, bool trimzeros, WeightTable<WT> *wtab )
 {
 	int32_t start, end, i, stillzero, lastnonzero, nz;
 	WT *wp, t, sum;
@@ -360,13 +359,15 @@ void resize( const ChannelT<T> &srcChannel, ChannelT<T> *dstChannel, const Filte
 	resize( srcChannel, srcChannel.getBounds(), dstChannel, dstChannel->getBounds(), filter );
 }
 
-#define resize_PROTOTYPES(r,data,T)\
-	template void resize( const SurfaceT<T> &srcSurface, SurfaceT<T> *dstSurface, const FilterBase &filter ); \
-	template void resize( const SurfaceT<T> &srcSurface, const Area &srcArea, SurfaceT<T> *dstSurface, const Area &dstArea, const FilterBase &filter ); \
-	template void resize( const ChannelT<T> &srcChannel, ChannelT<T> *dstChannel, const FilterBase &filter ); \
-	template SurfaceT<T> resizeCopy( const SurfaceT<T> &srcSurface, const Area &srcArea, const ivec2 &dstSize, const FilterBase &filter ); \
-	template void resize( const ChannelT<T> &srcChannel, const Area &srcArea, ChannelT<T> *dstChannel, const Area &dstArea, const FilterBase &filter );
+#define resize_PROTOTYPES(T)\
+	template CI_API void resize( const SurfaceT<T> &srcSurface, SurfaceT<T> *dstSurface, const FilterBase &filter ); \
+	template CI_API void resize( const SurfaceT<T> &srcSurface, const Area &srcArea, SurfaceT<T> *dstSurface, const Area &dstArea, const FilterBase &filter ); \
+	template CI_API void resize( const ChannelT<T> &srcChannel, ChannelT<T> *dstChannel, const FilterBase &filter ); \
+	template CI_API SurfaceT<T> resizeCopy( const SurfaceT<T> &srcSurface, const Area &srcArea, const ivec2 &dstSize, const FilterBase &filter ); \
+	template CI_API void resize( const ChannelT<T> &srcChannel, const Area &srcArea, ChannelT<T> *dstChannel, const Area &dstArea, const FilterBase &filter );
 
-BOOST_PP_SEQ_FOR_EACH( resize_PROTOTYPES, ~, CHANNEL_TYPES )
+// These should match CHANNEL_TYPES
+resize_PROTOTYPES(uint8_t)
+resize_PROTOTYPES(float)
 
 } } // namespace cinder::ip

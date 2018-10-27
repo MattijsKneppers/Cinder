@@ -41,7 +41,7 @@ namespace cinder { namespace audio {
 // ----------------------------------------------------------------------------------------------------
 
 Node::Node( const Format &format )
-	: mInitialized( false ), mEnabled( false ),	mChannelMode( format.getChannelMode() ),
+	: mInitialized( false ), mEnabled( false ), mEventScheduled( false ), mChannelMode( format.getChannelMode() ),
 		mNumChannels( 1 ), mAutoEnabled( true ), mProcessInPlace( true ), mLastProcessedFrame( numeric_limits<uint64_t>::max() )
 {
 	if( format.getChannels() ) {
@@ -49,7 +49,7 @@ Node::Node( const Format &format )
 		mChannelMode = ChannelMode::SPECIFIED;
 	}
 
-	if( ! boost::indeterminate( format.getAutoEnable() ) )
+	if( format.isAutoEnableSet() )
 		setAutoEnabled( format.getAutoEnable() );
 }
 
@@ -178,6 +178,14 @@ void Node::enable()
 	if( ! mInitialized )
 		initializeImpl();
 
+	// Need to cancel events regardless if node is already enabled as one might be disabling us
+	if( mEventScheduled ) {
+		auto context = getContext();
+		if( context && ! context->isAudioThread() ) {
+			context->cancelScheduledEvents( shared_from_this() );
+		}
+	}
+
 	if( mEnabled )
 		return;
 
@@ -187,6 +195,14 @@ void Node::enable()
 
 void Node::disable()
 {
+	// Need to cancel events regardless if node is already disabled as one might be enabling us
+	if( mEventScheduled ) {
+		auto context = getContext();
+		if( context && ! context->isAudioThread() ) {
+			context->cancelScheduledEvents( shared_from_this() );
+		}
+	}
+
 	if( ! mEnabled )
 		return;
 
@@ -196,12 +212,12 @@ void Node::disable()
 
 void Node::enable( double when )
 {
-	getContext()->schedule( when, shared_from_this(), true, [this] { enable(); } );
+	getContext()->scheduleEvent( when, shared_from_this(), true, [this] { enable(); } );
 }
 
 void Node::disable( double when )
 {
-	getContext()->schedule( when, shared_from_this(), false, [this] { disable(); } );
+	getContext()->scheduleEvent( when, shared_from_this(), false, [this] { disable(); } );
 }
 
 void Node::setEnabled( bool b )
@@ -435,6 +451,10 @@ void Node::pullInputs( Buffer *inPlaceBuffer )
 	}
 }
 
+void Node::process( Buffer * /*buffer*/ )
+{
+}
+
 void Node::sumInputs()
 {
 	// Pull all inputs, summing the results from the buffer that input used for processing.
@@ -500,7 +520,7 @@ bool Node::canConnectToInput( const NodeRef &input )
 	return true;
 }
 
-std::string Node::getName()
+std::string Node::getName() const
 {
 	return ! mName.empty() ? mName : System::demangleTypeName( typeid( *this ).name() );
 }

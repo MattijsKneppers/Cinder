@@ -71,19 +71,19 @@ typedef	signals::Signal<uint32_t (), signals::CollectorBitwiseAnd<uint32_t>>		Ev
 typedef	signals::Signal<bool (), signals::CollectorBooleanAnd>						EventSignalShouldQuit;
 
 //! Base class that all apps derive from.
-class AppBase {
+class CI_API AppBase {
  public:
 	//! Startup settings, used during App construction. They are modified before the app is created by passing a SettingsFn to the app instanciation macros.
-	class Settings {
+	class CI_API Settings {
 	  public:
 		Settings();
 		virtual ~Settings() {}
 
-		//! Sets the size of the default window measured in pixels
+		//! Sets the size of the default window measured in points
 		void	setWindowSize( int windowSizeX, int windowSizeY )	{ mDefaultWindowFormat.setSize( ivec2( windowSizeX, windowSizeY ) ); }
-		//! Sets the size of the default window measured in pixels
+		//! Sets the size of the default window measured in points
 		void	setWindowSize( const ivec2 &size )					{ mDefaultWindowFormat.setSize( size ); }
-		//! Gets the size of the default window measured in pixels
+		//! Gets the size of the default window measured in points
 		ivec2	getWindowSize() const								{ return mDefaultWindowFormat.getSize(); }
 		
 		//! Returns the position of the default window in screen coordinates measured in pixels
@@ -433,7 +433,7 @@ class AppBase {
 	virtual bool		receivesEvents() const { return true; }
 
 	//! Returns a pointer to the active App
-	static AppBase*			get() { return sInstance; }
+	static AppBase*			get();
 
   protected:
 	AppBase();

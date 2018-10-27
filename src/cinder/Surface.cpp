@@ -40,10 +40,7 @@
 #include "cinder/ImageIo.h"
 #include "cinder/ip/Fill.h"
 
-#include <boost/preprocessor/seq.hpp>
-#include <boost/type_traits/is_same.hpp>
-using boost::tribool;
-
+#include <type_traits>
 
 namespace cinder {
 
@@ -72,13 +69,13 @@ class ImageSourceSurface : public ImageSource {
 		mHeight = surface.getHeight();
 		setColorModel( ImageIo::CM_RGB );
 		setChannelOrder( ImageIo::ChannelOrder( surface.getChannelOrder().getImageIoChannelOrder() ) );
-		if( boost::is_same<T,uint8_t>::value ) {
+		if( std::is_same<T,uint8_t>::value ) {
 			setDataType( ImageIo::UINT8 );
 		}
-		else if( boost::is_same<T,uint16_t>::value ) {
+		else if( std::is_same<T,uint16_t>::value ) {
 			setDataType( ImageIo::UINT16 );
 		}
-		else if( boost::is_same<T,float>::value ) {
+		else if( std::is_same<T,float>::value ) {
 			setDataType( ImageIo::FLOAT32 );
 		}
 		else
@@ -263,15 +260,26 @@ SurfaceT<T>::SurfaceT( T *data, int32_t width, int32_t height, ptrdiff_t rowByte
 }
 
 template<typename T>
-SurfaceT<T>::SurfaceT( ImageSourceRef imageSource, const SurfaceConstraints &constraints, boost::tribool alpha )
+SurfaceT<T>::SurfaceT( ImageSourceRef imageSource, const SurfaceConstraints &constraints )
+{
+	init( imageSource, constraints, imageSource->hasAlpha() );
+}
+
+template<typename T>
+SurfaceT<T>::SurfaceT( ImageSourceRef imageSource, const SurfaceConstraints &constraints, bool alpha )
 {
 	init( imageSource, constraints, alpha );
 }
 
 #if defined( CINDER_UWP )
+template<typename T>
+void SurfaceT<T>::loadImageAsync(const fs::path path, SurfaceT &surface, const SurfaceConstraints &constraints )
+{
+	loadImageAsync( path, surface, constraints, surface.hasAlpha() );
+}
 
 template<typename T>
-void SurfaceT<T>::loadImageAsync(const fs::path path, SurfaceT &surface, const SurfaceConstraints &constraints = SurfaceConstraintsDefault(), boost::tribool alpha = boost::logic::indeterminate )
+void SurfaceT<T>::loadImageAsync(const fs::path path, SurfaceT &surface, const SurfaceConstraints &constraints, bool alpha )
 {
 	auto loadImageTask = create_task([path]() -> ImageSourceRef
 	{
@@ -370,19 +378,12 @@ SurfaceT<T> SurfaceT<T>::clone( const Area &area, bool copyPixels ) const
 }
 
 template<typename T>
-void SurfaceT<T>::init( ImageSourceRef imageSource, const SurfaceConstraints &constraints, boost::tribool alpha )
+void SurfaceT<T>::init( ImageSourceRef imageSource, const SurfaceConstraints &constraints, bool alpha )
 {
 	mWidth = imageSource->getWidth();
 	mHeight = imageSource->getHeight();
-	bool hasAlpha;
-	if( alpha )
-		hasAlpha = true;
-	else if( ! alpha )
-		hasAlpha = false;
-	else
-		hasAlpha = imageSource->hasAlpha();
 
-	mChannelOrder = constraints.getChannelOrder( hasAlpha );
+	mChannelOrder = constraints.getChannelOrder( alpha );
 	mRowBytes = constraints.getRowBytes( mWidth, mChannelOrder, sizeof(T) );
 	
 	mDataStore = std::shared_ptr<T>( new T[mHeight * mRowBytes], std::default_delete<T[]>() );
@@ -395,7 +396,7 @@ void SurfaceT<T>::init( ImageSourceRef imageSource, const SurfaceConstraints &co
 	
 	initChannels();
 	// if the image doesn't have alpha but we do, set the alpha to 1.0
-	if( hasAlpha && ( ! imageSource->hasAlpha() ) )
+	if( alpha && ( ! imageSource->hasAlpha() ) )
 		ip::fill( &getChannelAlpha(), CHANTRAIT<T>::max() );
 }
 
@@ -551,11 +552,11 @@ template<typename T>
 ImageTargetSurface<T>::ImageTargetSurface( SurfaceT<T> *aSurface )
 	: ImageTarget(), mSurface( aSurface )
 {
-	if( boost::is_same<T,float>::value )
+	if( std::is_same<T,float>::value )
 		setDataType( ImageIo::FLOAT32 );
-	else if( boost::is_same<T,uint16_t>::value )
+	else if( std::is_same<T,uint16_t>::value )
 		setDataType( ImageIo::UINT16 );
-	else if( boost::is_same<T,uint8_t>::value )
+	else if( std::is_same<T,uint8_t>::value )
 		setDataType( ImageIo::UINT8 );
 	else 
 		throw; // what is this?
@@ -612,9 +613,8 @@ void* ImageTargetSurface<T>::getRowPointer( int32_t row )
 	return reinterpret_cast<void*>( mSurface->getData( ivec2( 0, row ) ) );
 }
 
-#define Surface_PROTOTYPES(r,data,T)\
-	template class SurfaceT<T>;
-
-BOOST_PP_SEQ_FOR_EACH( Surface_PROTOTYPES, ~, (uint8_t)(uint16_t)(float) )
+template class CI_API SurfaceT<uint8_t>;
+template class CI_API SurfaceT<uint16_t>;
+template class CI_API SurfaceT<float>;
 
 } // namespace cinder

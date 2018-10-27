@@ -32,71 +32,87 @@
 #include "cinder/Url.h"
 #include "cinder/DataSource.h"
 #include "cinder/DataTarget.h"
-#undef check
-#include <boost/lexical_cast.hpp>
+#include <sstream>
 
 namespace cinder {
 
 //! Returns a canonical version of \a path. Collapses '.', ".." and "//". Converts '~' on Cocoa. Expands environment variables on MSW.
-fs::path expandPath( const fs::path &path );
+CI_API fs::path expandPath( const fs::path &path );
 //! Returns a path to the user's home directory.
-fs::path getHomeDirectory();
+CI_API fs::path getHomeDirectory();
 //! Returns a path to the user's documents directory.
-fs::path getDocumentsDirectory();
+CI_API fs::path getDocumentsDirectory();
 
 //! Launches a path in a web browser
-void launchWebBrowser( const Url &url );
+CI_API void launchWebBrowser( const Url &url );
 	
-//! Returns a vector of substrings split by the separator \a separator. <tt>split( "one two three", ' ' ) -> [ "one", "two", "three" ]</tt> If \a compress is TRUE, it will consider consecutive separators as one.
-std::vector<std::string> split( const std::string &str, char separator, bool compress = true );
-//! Returns a vector of substrings split by the characters in \a separators. <tt>split( "one, two, three", " ," ) -> [ "one", "two", "three" ]</tt> If \a compress is TRUE, it will consider consecutive separators as one.
-std::vector<std::string> split( const std::string &str, const std::string &separators, bool compress = true );
+//! Returns a vector of substrings split by the separator \a separator. <tt>split( "one two three", ' ' ) -> [ "one", "two", "three" ]</tt> If \a compress is \c true, it will consider consecutive separators as one.
+CI_API std::vector<std::string> split( const std::string &str, char separator, bool compress = true );
+//! Returns a vector of substrings split by the characters in \a separators. <tt>split( "one, two, three", " ," ) -> [ "one", "two", "three" ]</tt> If \a compress is \c true, it will consider consecutive separators as one.
+CI_API std::vector<std::string> split( const std::string &str, const std::string &separators, bool compress = true );
 
 //! Loads the contents of \a dataSource and returns it as a std::string
-std::string loadString( const DataSourceRef &dataSource );
-void writeString( const fs::path &path, const std::string &str );
-void writeString( const DataTargetRef &dataTarget, const std::string &str );
+CI_API std::string loadString( const DataSourceRef &dataSource );
+CI_API void writeString( const fs::path &path, const std::string &str );
+CI_API void writeString( const DataTargetRef &dataTarget, const std::string &str );
 
 //! Suspends the execution of the current thread until \a milliseconds have passed. Supports sub-millisecond precision only on Mac OS X.
-void sleep( float milliseconds );
+CI_API void sleep( float milliseconds );
 
 //! Returns the path separator for the host operating system's file system, \c '\' on Windows and \c '/' on Mac OS
 #if defined( CINDER_MSW )
-inline char getPathSeparator() { return '\\'; }
+CI_API inline char getPathSeparator() { return '\\'; }
 #else
 inline char getPathSeparator() { return '/'; }
 #endif
 
 //! Returns a std::map of the system's environment variables. Empty on WinRT.
-std::map<std::string, std::string> getEnvironmentVariables();
+CI_API std::map<std::string, std::string> getEnvironmentVariables();
 
 template<typename T>
-inline std::string toString( const T &t ) { return boost::lexical_cast<std::string>( t ); }
+std::string toString( const T &t ) { std::ostringstream ss; ss << t; return ss.str(); }
+
 template<typename T>
-inline T fromString( const std::string &s ) { return boost::lexical_cast<T>( s ); }
-// This specialization seems to only be necessary with more recent versions of Boost
+T fromString( const std::string &s ) { std::stringstream ss; ss << s; T temp; ss >> temp; return temp; }
+
 template<>
-inline Url fromString( const std::string &s ) { return Url( s ); }
+inline std::string fromString( const std::string &s ) { return s; }
+
 #if defined(CINDER_COCOA_TOUCH)
 // Necessary because boost::lexical_cast crashes when trying to convert a string to a double on iOS
 template<>
 inline double fromString( const std::string &s ) { return atof( s.c_str() ); }
 #endif
 
+//! returns \c true if ASCII strings \a a and \a b are case-insensitively equal. Not Unicode-aware.
+CI_API bool asciiCaseEqual( const std::string &a, const std::string &b );
+//! returns \c true if ASCII strings \a a and \a b are case-insensitively equal. Not Unicode-aware.
+CI_API bool asciiCaseEqual( const char *a, const char *b );
+//! returns equivalent of strcmp() using ASCII case-insensitive comparison
+CI_API int asciiCaseCmp( const char *a, const char *b );
+
+//! returns a copy of \a str with all whitespace (as defined by std::isspace()) removed from beginning and end
+CI_API std::string trim( const std::string &str );
+
 //! Returns a stack trace (aka backtrace) where \c stackTrace()[0] == caller, \c stackTrace()[1] == caller's parent, etc
-std::vector<std::string> stackTrace();
+CI_API std::vector<std::string> stackTrace();
+
+//! Sets the name of the current thread to \a name
+CI_API void setThreadName( const std::string &name );
 
 // ENDIANNESS
-inline int8_t	swapEndian( int8_t val ) { return val; }
-inline uint8_t	swapEndian( uint8_t val ) { return val; }
-extern int16_t	swapEndian( int16_t val );
-extern uint16_t	swapEndian( uint16_t val );
-extern int32_t	swapEndian( int32_t val );
-extern uint32_t swapEndian( uint32_t val );
-extern float	swapEndian( float val );
-extern double	swapEndian( double val );
+CI_API inline int8_t	swapEndian( int8_t val ) { return val; }
+CI_API inline uint8_t	swapEndian( uint8_t val ) { return val; }
+extern CI_API int16_t	swapEndian( int16_t val );
+extern CI_API uint16_t	swapEndian( uint16_t val );
+extern CI_API int32_t	swapEndian( int32_t val );
+extern CI_API uint32_t	swapEndian( uint32_t val );
+extern CI_API int64_t	swapEndian( int64_t val );
+extern CI_API uint64_t	swapEndian( uint64_t val );
+extern CI_API float		swapEndian( float val );
+extern CI_API double	swapEndian( double val );
 
-extern void swapEndianBlock( uint16_t *blockPtr, size_t blockSizeInBytes );
-extern void swapEndianBlock( float *blockPtr, size_t blockSizeInBytes );
+extern CI_API void swapEndianBlock( uint16_t *blockPtr, size_t blockSizeInBytes );
+extern CI_API void swapEndianBlock( float *blockPtr, size_t blockSizeInBytes );
 
 } // namespace cinder

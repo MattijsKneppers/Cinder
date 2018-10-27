@@ -143,7 +143,7 @@
 
 	// Android and Linux
 	#if defined( CINDER_ANDROID ) || defined( CINDER_LINUX )
-		#if ! defined( CINDER_LINUX_EGL_RPI2 )
+		#if ! defined( CINDER_GL_ES_2_RPI )
 		    #define CINDER_GL_HAS_DRAW_INSTANCED
 		#endif
 		#define CINDER_GL_HAS_TEXTURE_NORM16
@@ -165,9 +165,10 @@
 		#define CINDER_GL_HAS_TRANSFORM_FEEDBACK 
 		#define CINDER_GL_HAS_RENDER_SNORM
 		#define CINDER_GL_HAS_REQUIRED_INTERNALFORMAT
+		#define CINDER_GL_HAS_SAMPLERS
 	#else 
 		// OpenGL ES 2
-		#if ! defined( CINDER_LINUX_EGL_RPI2 )
+		#if ! defined( CINDER_GL_ES_2_RPI )
 		    #define CINDER_GL_HAS_DRAW_INSTANCED
 		    #define CINDER_GL_HAS_FBO_MULTISAMPLING
 		    #define CINDER_GL_HAS_MAP_BUFFER_RANGE
@@ -199,10 +200,10 @@
  	#define CINDER_GL_HAS_INSTANCED_ARRAYS
 	#define CINDER_GL_HAS_GEOM_SHADER
 	#define CINDER_GL_HAS_TESS_SHADER
+	#define CINDER_GL_HAS_SAMPLERS
 	
 	#define CINDER_GL_HAS_RENDER_SNORM
 	#define CINDER_GL_HAS_REQUIRED_INTERNALFORMAT
-
 	#define CINDER_GL_HAS_TEXTURE_NORM16
 	
 	#if defined( CINDER_LINUX ) || defined( CINDER_MSW )
@@ -230,12 +231,15 @@
 #endif
 
 #if defined( CINDER_GL_ES )
-	#if defined( GL_KHR_debug ) && ( CINDER_GL_ES_VERSION <= CINDER_GL_ES_VERSION_3_1 )
+	#if defined( GL_KHR_debug ) && ( CINDER_GL_ES_VERSION <= CINDER_GL_ES_VERSION_3_1 ) && ( ! defined( CINDER_GL_ANGLE ) )
 		#define CINDER_GL_HAS_KHR_DEBUG
 		#if ! defined( CINDER_GL_ANGLE )
-			#define GL_BUFFER 		GL_BUFFER_KHR
-			#define GL_SHADER 		GL_SHADER_KHR
-			#define GL_PROGRAM 		GL_PROGRAM_KHR
+			#define GL_BUFFER 			GL_BUFFER_KHR
+			#define GL_SHADER 			GL_SHADER_KHR
+			#define GL_PROGRAM 			GL_PROGRAM_KHR
+			#define GL_DEBUG_SOURCE_APPLICATION	GL_DEBUG_SOURCE_APPLICATION_KHR
+			#define glPushDebugGroup		glPushDebugGroupKHR
+			#define glPopDebugGroup			glPopDebugGroupKHR
 		#endif
 	#endif
 #else

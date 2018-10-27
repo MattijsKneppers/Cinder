@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.0 FATAL_ERROR )
+cmake_minimum_required( VERSION 2.8 FATAL_ERROR )
 
 set( CINDER_PLATFORM "MSW" )
 
@@ -12,8 +12,11 @@ list( APPEND SRC_SET_MSW
 	${CINDER_SRC_DIR}/cinder/UrlImplWinInet.cpp
 	${CINDER_SRC_DIR}/glload/wgl_load_cpp.cpp
 	${CINDER_SRC_DIR}/glload/wgl_load.c
-	${CINDER_SRC_DIR}/AntTweakBar/TwDirect3D11.cpp
 )
+
+if( NOT CINDER_DISABLE_ANTTWEAKBAR )
+	list( APPEND SRC_SET_MSW ${CINDER_SRC_DIR}/AntTweakBar/TwDirect3D11.cpp )
+endif()
 
 list( APPEND SRC_SET_APP_MSW
 	# TODO: should these two files be added to "cinder\\app" group?
@@ -31,13 +34,31 @@ list( APPEND SRC_SET_APP_MSW
 	${CINDER_SRC_DIR}/cinder/app/msw/RendererImplGlMsw.cpp
 )
 
+if( NOT CINDER_DISABLE_AUDIO )
+	list( APPEND SRC_SET_AUDIO_MSW
+		${CINDER_SRC_DIR}/cinder/audio/msw/ContextWasapi.cpp
+		${CINDER_SRC_DIR}/cinder/audio/msw/DeviceManagerWasapi.cpp
+		${CINDER_SRC_DIR}/cinder/audio/msw/FileMediaFoundation.cpp
+		${CINDER_SRC_DIR}/cinder/audio/msw/MswUtil.cpp
+	)
+
+	list( APPEND SRC_SET_CINDER_AUDIO_DSP
+		${CINDER_SRC_DIR}/cinder/audio/dsp/ooura/fftsg.cpp
+		${CINDER_SRC_DIR}/cinder/audio/dsp/ConverterR8brain.cpp
+	)
+endif()
+
 list( APPEND CINDER_SRC_FILES
 	${SRC_SET_MSW}
 	${SRC_SET_APP_MSW}
+	${SRC_SET_AUDIO_MSW}
+	${SRC_SET_CINDER_AUDIO_DSP}
 )
 
-source_group( "cinder\\msw"       FILES ${SRC_SET_MSW} )
-source_group( "cinder\\app\\msw"  FILES ${SRC_SET_APP_MSW} )
+source_group( "cinder\\msw"       	FILES ${SRC_SET_MSW} )
+source_group( "cinder\\app\\msw"  	FILES ${SRC_SET_APP_MSW} )
+source_group( "cinder\\audio\\msw"  FILES ${SRC_SET_AUDIO_MSW} )
+source_group( "cinder\\audio\\dsp"  FILES ${SRC_SET_CINDER_AUDIO_DSP} )
 
 list( APPEND CINDER_INCLUDE_SYSTEM_PRIVATE
     ${CINDER_INC_DIR}/msw/zlib
@@ -63,26 +84,13 @@ if( MSVC )
 	add_compile_options( /MP )
     # Static library flags
     set( CINDER_STATIC_LIBS_FLAGS_DEBUG     "/NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCPMT" )
-    set( CINDER_STATIC_LIBS_FLAGS_RELEASE   "/NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCPMT" )
    
     # Platform libraries 
     set( MSW_PLATFORM_LIBS "Ws2_32.lib wldap32.lib shlwapi.lib OpenGL32.lib wmvcore.lib Strmiids.lib Msimg32.lib" )
 
     set( MSW_SUBFOLDER "${CINDER_PATH}/lib/${CINDER_TARGET_SUBFOLDER}" )
     # Static library debug depends
-    set( CINDER_STATIC_LIBS_DEPENDS_DEBUG   "${MSW_PLATFORM_LIBS} ${MSW_SUBFOLDER}/zlib.lib" )
+    set( CINDER_STATIC_LIBS_DEPENDS_DEBUG   "${MSW_PLATFORM_LIBS}" )
     # Static library release depends
-    set( CINDER_STATIC_LIBS_DEPENDS_RELEASE "${MSW_PLATFORM_LIBS} ${MSW_SUBFOLDER}/zlib.lib" )
-
-    # Glob debug boost libs
-    file( GLOB MSW_BOOST_LIBS "${MSW_SUBFOLDER}/libboost*-sgd-*.lib" )
-    foreach( BOOST_LIB ${MSW_BOOST_LIBS} )
-        set( CINDER_STATIC_LIBS_DEPENDS_DEBUG "${CINDER_STATIC_LIBS_DEPENDS_DEBUG} ${BOOST_LIB}" )
-    endforeach()
-
-    # Glob release boost libs
-    file( GLOB MSW_BOOST_LIBS "${MSW_SUBFOLDER}/libboost*-s-*.lib" )
-    foreach( BOOST_LIB ${MSW_BOOST_LIBS} )
-        set( CINDER_STATIC_LIBS_DEPENDS_RELEASE "${CINDER_STATIC_LIBS_DEPENDS_RELEASE} ${BOOST_LIB}" )
-    endforeach()
+    set( CINDER_STATIC_LIBS_DEPENDS_RELEASE "${MSW_PLATFORM_LIBS}" )
 endif()

@@ -64,7 +64,6 @@
  	#if defined( __ANDROID__ )
  		#include "cinder/android/libc_helper.h"
  	#endif
-	#define NOMINMAX
 	#include "asio/asio.hpp"
 #endif
 
@@ -163,6 +162,11 @@ AppBase::AppBase()
 AppBase::~AppBase()
 {
 	mIo->stop();
+}
+
+AppBase* AppBase::get() 
+{ 
+	return sInstance; 
 }
 
 // These are called by application instantiation main functions
@@ -313,7 +317,7 @@ Surface	AppBase::copyWindowSurface()
 
 Surface	AppBase::copyWindowSurface( const Area &area )
 {
-	Area clippedArea = area.getClipBy( getWindowBounds() );
+	Area clippedArea = area.getClipBy( getWindow()->toPixels( getWindow()->getBounds() ) );
 	return getWindow()->getRenderer()->copyWindowSurface( clippedArea, getWindow()->toPixels( getWindow()->getHeight() ) );
 }
 

@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		000703221DEB7DE00086D6CA /* Path2dTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 000703211DEB7DE00086D6CA /* Path2dTest.cpp */; };
+		114CE0E91E2F03930002A384 /* ShaderPreprocessorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 114CE0E71E2F03930002A384 /* ShaderPreprocessorTest.cpp */; };
+		114CE0EA1E2F03930002A384 /* Utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 114CE0E81E2F03930002A384 /* Utilities.cpp */; };
+		117BC7781E836FDF003D8F25 /* FileWatcherTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 117BC7771E836FDF003D8F25 /* FileWatcherTest.cpp */; };
 		11E4FC491C26788A0082A67E /* BufferUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 11E4FC441C26788A0082A67E /* BufferUnit.cpp */; };
 		11E4FC4D1C267DB70082A67E /* FftUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 11E4FC451C26788A0082A67E /* FftUnit.cpp */; };
 		11E4FC4E1C26801E0082A67E /* RingBufferUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 11E4FC471C26788A0082A67E /* RingBufferUnit.cpp */; };
@@ -45,6 +49,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		000703211DEB7DE00086D6CA /* Path2dTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Path2dTest.cpp; sourceTree = "<group>"; };
 		006D720219952D00008149E2 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		006D720319952D00008149E2 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		0091D8F80E81B9330029341E /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = /System/Library/Frameworks/OpenGL.framework; sourceTree = "<absolute>"; };
@@ -56,6 +61,9 @@
 		00B995591B128DF400A5C623 /* IOSurface.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOSurface.framework; path = System/Library/Frameworks/IOSurface.framework; sourceTree = SDKROOT; };
 		0BFCCD63DF794B1EAE655DCC /* CinderApp.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = CinderApp.icns; path = ../../../samples/data/CinderApp.icns; sourceTree = "<group>"; };
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		114CE0E71E2F03930002A384 /* ShaderPreprocessorTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShaderPreprocessorTest.cpp; sourceTree = "<group>"; };
+		114CE0E81E2F03930002A384 /* Utilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Utilities.cpp; sourceTree = "<group>"; };
+		117BC7771E836FDF003D8F25 /* FileWatcherTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileWatcherTest.cpp; sourceTree = "<group>"; };
 		11E4FC441C26788A0082A67E /* BufferUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BufferUnit.cpp; sourceTree = "<group>"; };
 		11E4FC451C26788A0082A67E /* FftUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FftUnit.cpp; sourceTree = "<group>"; };
 		11E4FC471C26788A0082A67E /* RingBufferUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RingBufferUnit.cpp; sourceTree = "<group>"; };
@@ -66,7 +74,7 @@
 		5323E6B10EAFCA74003A9687 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = /System/Library/Frameworks/CoreVideo.framework; sourceTree = "<absolute>"; };
 		6E8118130C2B4ADCA23B5B2B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9CA851B61C1F74000049358B /* Base64Test.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Base64Test.cpp; sourceTree = "<group>"; };
-		9CA851B71C1F74000049358B /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = catch.hpp; sourceTree = "<group>"; };
+		9CA851B71C1F74000049358B /* catch.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = catch.hpp; path = ../src/catch.hpp; sourceTree = "<group>"; };
 		9CA851B81C1F74000049358B /* JsonTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsonTest.cpp; sourceTree = "<group>"; };
 		9CA851B91C1F74000049358B /* ObjLoaderTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjLoaderTest.cpp; sourceTree = "<group>"; };
 		9CA851BA1C1F74000049358B /* RandTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RandTest.cpp; sourceTree = "<group>"; };
@@ -103,13 +111,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		01B97315FEAEA392516A2CEA /* Blocks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Blocks;
-			sourceTree = "<group>";
-		};
 		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -159,12 +160,11 @@
 		29B97314FDCFA39411CA2CEA /* UnitTests */ = {
 			isa = PBXGroup;
 			children = (
-				01B97315FEAEA392516A2CEA /* Blocks */,
 				29B97315FDCFA39411CA2CEA /* Headers */,
+				9CA851B51C1F74000049358B /* Source */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
-				9CA851B51C1F74000049358B /* Source */,
 			);
 			indentWidth = 4;
 			name = UnitTests;
@@ -175,6 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				C0A5E928B33D45F6A388E366 /* UnitTests_Prefix.pch */,
+				9CA851B71C1F74000049358B /* catch.hpp */,
 			);
 			name = Headers;
 			sourceTree = "<group>";
@@ -206,14 +207,17 @@
 				11E4FC431C26788A0082A67E /* audio */,
 				9CA851BB1C1F74000049358B /* signals */,
 				9CA851B61C1F74000049358B /* Base64Test.cpp */,
-				9CA851B71C1F74000049358B /* catch.hpp */,
+				117BC7771E836FDF003D8F25 /* FileWatcherTest.cpp */,
 				9CA851B81C1F74000049358B /* JsonTest.cpp */,
 				9CA851B91C1F74000049358B /* ObjLoaderTest.cpp */,
 				4989E06B1DB6889500503C9A /* PolyLineTest.cpp */,
 				9CA851BA1C1F74000049358B /* RandTest.cpp */,
+				114CE0E71E2F03930002A384 /* ShaderPreprocessorTest.cpp */,
 				9CA851BD1C1F74000049358B /* SystemTest.cpp */,
-				9CA851BE1C1F74000049358B /* TestMain.cpp */,
 				9CA851BF1C1F74000049358B /* UnicodeTest.cpp */,
+				9CA851BE1C1F74000049358B /* TestMain.cpp */,
+				000703211DEB7DE00086D6CA /* Path2dTest.cpp */,
+				114CE0E81E2F03930002A384 /* Utilities.cpp */,
 			);
 			name = Source;
 			path = ../src;
@@ -285,6 +289,7 @@
 			files = (
 				9CA851C21C1F74000049358B /* ObjLoaderTest.cpp in Sources */,
 				9CA851C61C1F74000049358B /* TestMain.cpp in Sources */,
+				117BC7781E836FDF003D8F25 /* FileWatcherTest.cpp in Sources */,
 				9CA851C01C1F74000049358B /* Base64Test.cpp in Sources */,
 				9CA851C31C1F74000049358B /* RandTest.cpp in Sources */,
 				11E4FC4D1C267DB70082A67E /* FftUnit.cpp in Sources */,
@@ -292,9 +297,12 @@
 				9CA851C11C1F74000049358B /* JsonTest.cpp in Sources */,
 				11E4FC4E1C26801E0082A67E /* RingBufferUnit.cpp in Sources */,
 				9CA851C51C1F74000049358B /* SystemTest.cpp in Sources */,
+				114CE0E91E2F03930002A384 /* ShaderPreprocessorTest.cpp in Sources */,
 				9CA851C41C1F74000049358B /* SignalsTest.cpp in Sources */,
 				9CA851C71C1F74000049358B /* UnicodeTest.cpp in Sources */,
 				11E4FC491C26788A0082A67E /* BufferUnit.cpp in Sources */,
+				000703221DEB7DE00086D6CA /* Path2dTest.cpp in Sources */,
+				114CE0EA1E2F03930002A384 /* Utilities.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -304,7 +312,6 @@
 		9CC02E851BDE74AA00B5058A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -335,10 +342,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_LDFLAGS = (
-					"$(CINDER_PATH)/lib/macosx/$(CONFIGURATION)/libcinder.a",
-					"-lcurl",
-				);
+				OTHER_LDFLAGS = ../../../lib/macosx/$CONFIGURATION/libcinder.a;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYMROOT = ./build;
 				USER_HEADER_SEARCH_PATHS = "\"$(CINDER_PATH)/include\" ../";
@@ -348,7 +352,6 @@
 		9CC02E861BDE74AA00B5058A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -374,10 +377,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"$(CINDER_PATH)/lib/macosx/$(CONFIGURATION)/libcinder.a",
-					"-lcurl",
-				);
+				OTHER_LDFLAGS = ../../../lib/macosx/$CONFIGURATION/libcinder.a;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYMROOT = ./build;
 				USER_HEADER_SEARCH_PATHS = "\"$(CINDER_PATH)/include\" ../";
@@ -389,7 +389,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CINDER_PATH = ../../..;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++11";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				ENABLE_TESTABILITY = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -407,7 +407,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CINDER_PATH = ../../..;
-				CLANG_CXX_LANGUAGE_STANDARD = "c++11";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;

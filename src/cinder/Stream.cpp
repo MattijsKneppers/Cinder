@@ -28,9 +28,7 @@
 
 #include <stdio.h>
 #include <limits>
-#include <boost/scoped_array.hpp>
 #include <iostream>
-#include <boost/preprocessor/seq/for_each.hpp>
 using std::string;
 
 namespace cinder {
@@ -43,7 +41,7 @@ namespace cinder {
 template<typename T>
 void OStream::writeBig( T t )
 {
-#ifdef BOOST_BIG_ENDIAN
+#if ! defined( CINDER_LITTLE_ENDIAN )
 	write( t );
 #else
 	t = swapEndian( t );
@@ -54,7 +52,7 @@ void OStream::writeBig( T t )
 template<typename T>
 void OStream::writeLittle( T t )
 {
-#ifdef CINDER_LITTLE_ENDIAN
+#if defined( CINDER_LITTLE_ENDIAN )
 	write( t );
 #else
 	t = swapEndian( t );
@@ -84,7 +82,7 @@ void IStreamCinder::read( fs::path *p )
 template<typename T>
 void IStreamCinder::readBig( T *t )
 {
-#ifdef BOOST_BIG_ENDIAN
+#if ! defined( CINDER_LITTLE_ENDIAN )
 	read( t );
 #else
 	IORead( t, sizeof(T) );
@@ -114,7 +112,7 @@ void IStreamCinder::readFixedString( char *t, size_t size, bool nullTerminate )
 
 void IStreamCinder::readFixedString( std::string *t, size_t size )
 {
-	boost::scoped_array<char> buffer( new char[size+1] );
+	std::unique_ptr<char[]> buffer( new char[size+1] );
 
 	IORead( buffer.get(), size );
 	buffer[size] = 0;
@@ -194,7 +192,7 @@ size_t IStreamFile::readDataImpl( void *t, size_t size )
 		return size;
 	}
 	else if ( ( mBufferFileOffset < mBufferOffset ) && ( mBufferOffset < mBufferFileOffset + (off_t)mBufferSize ) ) { // partially inside
-		size_t amountInBuffer = ( mBufferFileOffset + mBufferSize ) - mBufferOffset;
+		size_t amountInBuffer = static_cast<size_t>( ( mBufferFileOffset + mBufferSize ) - mBufferOffset );
 		memcpy( t, mBuffer.get() + ( mBufferOffset - mBufferFileOffset ), amountInBuffer );
 		mBufferOffset += amountInBuffer;
 		return amountInBuffer + readDataImpl( reinterpret_cast<uint8_t*>( t ) + amountInBuffer, size - amountInBuffer );
@@ -427,7 +425,7 @@ void OStreamFile::seekAbsolute( off_t absoluteOffset )
 
 void OStreamFile::seekRelative( off_t relativeOffset )
 {
-	fseek( mFile, relativeOffset, SEEK_CUR );
+	std::fseek( mFile, static_cast<long>( relativeOffset ), SEEK_CUR );
 }
 
 void OStreamFile::IOWrite( const void *t, size_t size )
@@ -520,12 +518,12 @@ size_t IoStreamFile::readDataImpl( void *t, size_t size )
 		return size;
 	}
 	else if ( ( mBufferFileOffset < mBufferOffset ) && ( mBufferOffset < mBufferFileOffset + (off_t)mBufferSize ) ) { // partially inside
-		size_t amountInBuffer = ( mBufferFileOffset + mBufferSize ) - mBufferOffset;
+		size_t amountInBuffer = static_cast<size_t>( ( mBufferFileOffset + mBufferSize ) - mBufferOffset );
 		memcpy( t, mBuffer.get() + ( mBufferOffset - mBufferFileOffset ), amountInBuffer );
 		mBufferOffset += amountInBuffer;
 		return amountInBuffer + readDataImpl( reinterpret_cast<uint8_t*>( t ) + amountInBuffer, size - amountInBuffer );
 	}
-	else if( size > mDefaultBufferSize ) { // entirely outside of buffer, and too big to buffer anyway
+	else if( size > (size_t)mDefaultBufferSize ) { // entirely outside of buffer, and too big to buffer anyway
 		fseek( mFile, static_cast<long>( mBufferOffset ), SEEK_SET );
 		size_t bytesRead = fread( t, 1, size, mFile );
 		mBufferOffset += bytesRead;
@@ -584,7 +582,7 @@ void IStreamMem::seekAbsolute( off_t absoluteOffset )
 {
 	if( absoluteOffset < 0 )
 		absoluteOffset = mDataSize + absoluteOffset;
-	mOffset = absoluteOffset;
+	mOffset = static_cast<size_t>( absoluteOffset );
 	if( absoluteOffset > static_cast<off_t>( mDataSize ) )
 		throw StreamExc();
 }
@@ -635,7 +633,7 @@ void OStreamMem::seekAbsolute( off_t absoluteOffset )
 			mDataSize *= 2;
 		mBuffer = realloc( mBuffer, mDataSize );
 	}
-	mOffset = absoluteOffset;
+	mOffset = static_cast<size_t>( absoluteOffset );
 }
 
 void OStreamMem::seekRelative( off_t relativeOffset )
@@ -724,12 +722,12 @@ void loadStreamMemory( IStreamRef is, std::shared_ptr<uint8_t> *resultData, size
 	if( fileSize > std::numeric_limits<off_t>::max() )
 		throw StreamExcOutOfMemory();
 	
-	*resultData = std::shared_ptr<uint8_t>( (uint8_t*)malloc( fileSize ), free );
+	*resultData = std::shared_ptr<uint8_t>( (uint8_t*)malloc( static_cast<size_t>( fileSize ) ), free );
 	if( ! (*resultData ) )
 		throw StreamExcOutOfMemory();
 
 	*resultDataSize = static_cast<size_t>( fileSize );
-	is->readDataAvailable( resultData->get(), fileSize );
+	is->readDataAvailable( resultData->get(), static_cast<size_t>( fileSize ) );
 }
 
 BufferRef loadStreamBuffer( IStreamRef is )
@@ -744,7 +742,7 @@ BufferRef loadStreamBuffer( IStreamRef is )
 	
 	if( fileSize ) { // sometimes fileSize will be zero for a stream that doesn't know how big it is
 		auto result = std::make_shared<Buffer>( fileSize );
-		is->readDataAvailable( result->getData(), fileSize );
+		is->readDataAvailable( result->getData(), static_cast<size_t>( fileSize ) );
 
 		return result;
 	}
@@ -792,17 +790,27 @@ StreamExc::StreamExc( const std::string &fontName ) throw()
 
 /////////////////////////////////////////////////////////////////////
 
-#define STREAM_PROTOTYPES(r,data,T)\
-	template void OStream::write<T>( T t ); \
-	template void OStream::writeEndian<T>( T t, uint8_t endian ); \
-	template void OStream::writeBig<T>( T t ); \
-	template void OStream::writeLittle<T>( T t ); \
-	template void IStreamCinder::read<T>( T *t ); \
-	template void IStreamCinder::readEndian<T>( T *t, uint8_t endian ); \
-	template void IStreamCinder::readBig<T>( T *t ); \
-	template void IStreamCinder::readLittle<T>( T *t );
+#define STREAM_PROTOTYPES(T)\
+	template CI_API void OStream::write<T>( T t ); \
+	template CI_API void OStream::writeEndian<T>( T t, uint8_t endian ); \
+	template CI_API void OStream::writeBig<T>( T t ); \
+	template CI_API void OStream::writeLittle<T>( T t ); \
+	template CI_API void IStreamCinder::read<T>( T *t ); \
+	template CI_API void IStreamCinder::readEndian<T>( T *t, uint8_t endian ); \
+	template CI_API void IStreamCinder::readBig<T>( T *t ); \
+	template CI_API void IStreamCinder::readLittle<T>( T *t );
 
-BOOST_PP_SEQ_FOR_EACH( STREAM_PROTOTYPES, ~, (int8_t)(uint8_t)(int16_t)(uint16_t)(int32_t)(uint32_t)(float)(double) )
+STREAM_PROTOTYPES(int8_t)
+STREAM_PROTOTYPES(uint8_t)
+STREAM_PROTOTYPES(int16_t)
+STREAM_PROTOTYPES(uint16_t)
+STREAM_PROTOTYPES(int32_t)
+STREAM_PROTOTYPES(uint32_t)
+STREAM_PROTOTYPES(int64_t)
+STREAM_PROTOTYPES(uint64_t)
+STREAM_PROTOTYPES(float)
+STREAM_PROTOTYPES(double)
+
 
 #if defined( CINDER_UWP )
 	#pragma warning(pop) 

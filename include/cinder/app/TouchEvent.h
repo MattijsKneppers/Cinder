@@ -31,9 +31,9 @@
 namespace cinder { namespace app {
 
 //! Represents a touch event
-class TouchEvent : public Event {
+class CI_API TouchEvent : public Event {
   public:
-	class Touch {
+	class CI_API Touch {
 	  public:
 		Touch() {}
 		Touch( const vec2 &pos, const vec2 &prevPos, uint32_t id, double time, void *native )
@@ -76,27 +76,29 @@ class TouchEvent : public Event {
 	TouchEvent()
 		: Event()
 	{}
-	TouchEvent( const WindowRef &win, const std::vector<Touch> &touches )
-		: Event( win ), mTouches( touches )
+	TouchEvent( const WindowRef &win, const std::vector<Touch> &touches, void *native = nullptr )
+		: Event( win ), mTouches( touches ), mNative( native )
 	{}
 	
 	//! Returns a std::vector of Touch descriptors associated with this event
 	const std::vector<Touch>&	getTouches() const { return mTouches; }
 	//! Returns a std::vector of Touch descriptors associated with this event
 	std::vector<Touch>&			getTouches() { return mTouches; }
-
+	//! Returns a pointer to the OS-native object. This is a UIEvent* on Cocoa Touch, a NSEvent* on OSX, and a nullptr on MSW.
+	const void*	                getNative() const { return mNative; }
   private:
 	std::vector<Touch>		mTouches;
 	bool					mHandled;
+	void					*mNative;
 };
 
-inline std::ostream& operator<<( std::ostream &out, const TouchEvent::Touch &touch )
+CI_API inline std::ostream& operator<<( std::ostream &out, const TouchEvent::Touch &touch )
 {
 	out << touch.getId() << ": " << touch.getPos() << " @ " << touch.getTime() << "s";
 	return out;
 }
 
-inline std::ostream& operator<<( std::ostream &out, const TouchEvent &event )
+CI_API inline std::ostream& operator<<( std::ostream &out, const TouchEvent &event )
 {
 	out << "{" << std::endl;
 	for( const auto &touch : event.getTouches() ) {

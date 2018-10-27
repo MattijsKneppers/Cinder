@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.0 FATAL_ERROR )
+cmake_minimum_required( VERSION 2.8 FATAL_ERROR )
 set( CMAKE_VERBOSE_MAKEFILE ON )
 
 # Configure the Android toolchain before the project start
@@ -12,8 +12,8 @@ endif()
 # Project start
 project( cinder )
 
-option( CINDER_BUILD_SAMPLES "Build all samples." OFF )
-option( CINDER_BUILD_TESTS "Build all unit tests." OFF )
+option( CINDER_BUILD_TESTS "Build unit tests." OFF )
+option( CINDER_BUILD_ALL_SAMPLES "Build all samples." OFF )
 set( CINDER_BUILD_SAMPLE "" CACHE STRING "Build a specific sample by specifying its path relative to the samples directory (ex. '_opengl/Cube')." )
 
 set( CINDER_PATH      "${CMAKE_CURRENT_SOURCE_DIR}" )
@@ -39,7 +39,7 @@ endif()
 
 include( ${CINDER_CMAKE_DIR}/libcinder_target.cmake )
 
-if( CINDER_BUILD_SAMPLES )
+if( CINDER_BUILD_ALL_SAMPLES )
 	include( ${CINDER_CMAKE_DIR}/modules/findCMakeDirs.cmake )
 
 	set( allSamples "" )
@@ -50,8 +50,10 @@ if( CINDER_BUILD_SAMPLES )
 		add_subdirectory( ${sampleDir} )
 	endforeach()
 elseif( CINDER_BUILD_SAMPLE )
-	ci_log_v( "adding sample: ${CINDER_BUILD_SAMPLE}" )
-	add_subdirectory( ${CINDER_PATH}/samples/${CINDER_BUILD_SAMPLE}/proj/cmake )
+	foreach( sampleDir ${CINDER_BUILD_SAMPLE} )
+		ci_log_v( "adding sample: ${sampleDir}" )
+		add_subdirectory( ${CINDER_PATH}/samples/${sampleDir}/proj/cmake )
+	endforeach()
 endif()
 
 if( CINDER_BUILD_TESTS )

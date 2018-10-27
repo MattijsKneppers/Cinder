@@ -39,11 +39,11 @@ namespace cinder { namespace audio {
 OutputNode::OutputNode( const Format &format )
 	: Node( format ), mClipDetectionEnabled( true ), mClipThreshold( 2 ), mLastClip( 0 )
 {
-	if( boost::indeterminate( format.getAutoEnable() ) )
+	if( ! format.isAutoEnableSet() )
 		setAutoEnabled( false );
 }
 
-void OutputNode::connect( const NodeRef &output )
+void OutputNode::connect( const NodeRef & /*output*/ )
 {
 	CI_ASSERT_MSG( 0, "OutputNode does not support connecting to other outputs" );
 }
@@ -124,6 +124,21 @@ void OutputDeviceNode::deviceParamsDidChange()
 	getContext()->initializeAllNodes();
 
 	getContext()->setEnabled( mWasEnabledBeforeParamsChange );
+}
+
+size_t OutputDeviceNode::getOutputSampleRate()
+{ 
+	return getDevice()->getSampleRate();
+}
+
+size_t OutputDeviceNode::getOutputFramesPerBlock()
+{
+	return getDevice()->getFramesPerBlock();
+}
+
+string OutputDeviceNode::getName() const
+{
+	return Node::getName() + " (" + getDevice()->getName() + ")";
 }
 
 } } // namespace cinder::audio

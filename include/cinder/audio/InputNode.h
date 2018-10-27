@@ -37,7 +37,7 @@ typedef std::shared_ptr<class CallbackProcessorNode>	CallbackProcessorNodeRef;
 //!
 //! By default, you must call enable() before a InputNode will process audio. \see Node::Format::autoEnable()
 //! The default ChannelMode is set to Node::ChannelMode::MATCHES_OUTPUT, though subclasses may override this to use SPECIFIED instead.
-class InputNode : public Node {
+class CI_API InputNode : public Node {
   public:
 	virtual ~InputNode();
 
@@ -52,7 +52,7 @@ class InputNode : public Node {
 //!
 //! You do not directly construct an InputDeviceNode. Instead, you use the platform-defined method Context::createInputDeviceNode().
 //! If number of channels hasn't been specified via Node::Format, defaults to `min( 2, getDevice()->getNumInputChannels() )`.
-class InputDeviceNode : public InputNode {
+class CI_API InputDeviceNode : public InputNode {
   public:
 	virtual ~InputDeviceNode();
 
@@ -63,6 +63,14 @@ class InputDeviceNode : public InputNode {
 	uint64_t getLastUnderrun() const;
 	//! Returns the frame of the last buffer overrun or 0 if none since the last time this method was called.
 	uint64_t getLastOverrun() const;
+
+	//! Sets the amount of extra sample storage used by RingBuffers. Default value is 2, must be at least 1.
+	void	setRingBufferPaddingFactor( float factor );
+	//! Returns the amount of extra sample storage used by RingBuffers.
+	float	getRingBufferPaddingFactor() const	{ return mRingBufferPaddingFactor; }
+
+	//! Overridden to append the Device's name.
+	std::string getName() const override;
 
   protected:
 	InputDeviceNode( const DeviceRef &device, const Format &format );
@@ -75,13 +83,14 @@ class InputDeviceNode : public InputNode {
   private:
 	DeviceRef						mDevice;
 	mutable std::atomic<uint64_t>	mLastOverrun, mLastUnderrun;
+	float							mRingBufferPaddingFactor = 2;
 };
 
 //! Callback used to allow simple audio processing without subclassing a Node. First parameter is the Buffer to which to write samples, second parameter is the samplerate.
 typedef std::function<void( Buffer *, size_t )> CallbackProcessorFn;
 
 //! InputNode that processes audio with a std::function callback. \see CallbackProcessorFn
-class CallbackProcessorNode : public InputNode {
+class CI_API CallbackProcessorNode : public InputNode {
   public:
 	CallbackProcessorNode( const CallbackProcessorFn &callbackFn, const Format &format = Format() );
 	virtual ~CallbackProcessorNode() {}

@@ -247,12 +247,6 @@ void JsonTree::init( const string &key, const Json::Value &value, bool setType, 
 				mValueType = VALUE_BOOL;
 			}
 		}
-		else if ( value.isDouble() ) { 
-			mValue = toString( value.asDouble() );
-			if ( setType ) {
-				mValueType = VALUE_DOUBLE;
-			}
-		}
 		else if ( value.isInt() ) { 
 			mValue = toString( value.asLargestInt() );
 			if ( setType ) {
@@ -269,6 +263,12 @@ void JsonTree::init( const string &key, const Json::Value &value, bool setType, 
 			mValue = toString( value.asLargestUInt() );
 			if ( setType ) {
 				mValueType = VALUE_UINT;
+			}
+		}
+		else if ( value.isDouble() ) { // jsoncpp defines isDouble() to include integral types, so this must follow isInt() && isUint() 
+			mValue = toString( value.asDouble() );
+			if ( setType ) {
+				mValueType = VALUE_DOUBLE;
 			}
 		}
 	}
@@ -534,7 +534,7 @@ JsonTree* JsonTree::getNodePtr( const string &relativePath, bool caseSensitive, 
         // The key is numeric
 		if( isIndex( *pathIt ) ) {
             // Find child which uses this index as its key
-			uint32_t index = boost::lexical_cast<int32_t>( *pathIt );
+			uint32_t index = std::stoi( *pathIt );
 			uint32_t i = 0;
 			for ( node = curNode->getChildren().begin(); node != curNode->getChildren().end(); ++node, i++ ) {
 				if ( i == index ) {
@@ -551,7 +551,7 @@ JsonTree* JsonTree::getNodePtr( const string &relativePath, bool caseSensitive, 
                 string key2 = *pathIt;
                 if( caseSensitive && key1 == key2 ) {
                     keysMatch = true;
-                } else if ( !caseSensitive && ( boost::iequals( key1, key2 ) ) ) {
+                } else if ( !caseSensitive && ( ci::asciiCaseEqual( key1, key2 ) ) ) {
                     keysMatch = true;
                 }
                 

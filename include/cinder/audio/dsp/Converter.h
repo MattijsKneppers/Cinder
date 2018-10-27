@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "cinder/Export.h"
 #include "cinder/audio/Buffer.h"
 
 #include <memory>
@@ -31,7 +32,7 @@
 namespace cinder { namespace audio { namespace dsp {
 
 //! A platform-specific converter that supports samplerate and channel conversion.
-class Converter {
+class CI_API Converter {
   public:
 	//! If \a destSampleRate is 0, it is set to match \a sourceSampleRate. If \a destNumChannels is 0, it is set to match \a sourceNumChannels.
 	static std::unique_ptr<Converter> create( size_t sourceSampleRate, size_t destSampleRate, size_t sourceNumChannels, size_t destNumChannels, size_t sourceMaxFramesPerBlock );
@@ -39,7 +40,7 @@ class Converter {
 	virtual ~Converter() {}
 
 	//! Converts up to getSourceMaxFramesPerBlock() frames of audio data from \a sourceBuffer into \a destBuffer. Returns a \a std::pair<num source frames used, num dest frames written>
-	//! \note destBuffer must be large enough to complete the conversion, which is calculated as: \code minNumDestFrames = min( sourceBuffer->getNumFrames, getSourceMaxFramesPerBlock() ) * getDestSampleRate() * getSourceSampleRate() \endcode
+	//! \note destBuffer must be large enough to complete the conversion, which is calculated as: \code minNumDestFrames = min( sourceBuffer->getNumFrames, getSourceMaxFramesPerBlock() ) * getDestSampleRate() / getSourceSampleRate() \endcode
 	virtual std::pair<size_t, size_t> convert( const Buffer *sourceBuffer, Buffer *destBuffer ) = 0;
 
 	//! Clears the state of the converter, discarding / flushing accumulated samples. Optional for implementations.
@@ -59,12 +60,12 @@ class Converter {
 };
 
 //! Mixes \a numFrames frames of \a sourceBuffer to \a destBuffer's layout, replacing its content. Channel up or down mixing is applied if necessary.
-void mixBuffers( const Buffer *sourceBuffer, Buffer *destBuffer, size_t numFrames );
+CI_API void mixBuffers( const Buffer *sourceBuffer, Buffer *destBuffer, size_t numFrames );
 //! Mixes \a sourceBuffer to \a destBuffer's layout, replacing its content. Channel up or down mixing is applied if necessary. Unequal frame counts are permitted (the minimum size will be used).
 inline void mixBuffers( const Buffer *sourceBuffer, Buffer *destBuffer )	{ mixBuffers( sourceBuffer, destBuffer, std::min( sourceBuffer->getNumFrames(), destBuffer->getNumFrames() ) ); }
 
 //! Sums \a numFrames frames of \a sourceBuffer into \a destBuffer. Channel up or down mixing is applied if necessary.
-void sumBuffers( const Buffer *sourceBuffer, Buffer *destBuffer, size_t numFrames );
+CI_API void sumBuffers( const Buffer *sourceBuffer, Buffer *destBuffer, size_t numFrames );
 //! Sums \a sourceBuffer into \a destBuffer. Channel up or down mixing is applied if necessary. Unequal frame counts are permitted (the minimum size will be used).
 inline void sumBuffers( const Buffer *sourceBuffer, Buffer *destBuffer )	{ sumBuffers( sourceBuffer, destBuffer, std::min( sourceBuffer->getNumFrames(), destBuffer->getNumFrames() ) ); }
 
@@ -74,6 +75,26 @@ void convert( const SourceT *sourceArray, DestT *destArray, size_t length )
 {
 	for( size_t i = 0; i < length; i++ )
 		destArray[i] = static_cast<DestT>( sourceArray[i] );
+}
+
+//! Converts a float or double array to int16_t
+template<typename FloatT>
+void convert( const FloatT *sourceArray, int16_t *destArray, size_t length )
+{
+	const FloatT intNormalizer = 32768;
+
+	for( size_t i = 0; i < length; i++ )
+		destArray[i] = int16_t( sourceArray[i] * intNormalizer );
+}
+
+//! Converts an int16_t array to float or double
+template<typename FloatT>
+void convert( const int16_t *sourceArray, FloatT *destArray, size_t length )
+{
+	const FloatT floatNormalizer = (FloatT)3.0517578125e-05;	// 1.0 / 32768.0
+
+	for( size_t i = 0; i < length; i++ )
+		destArray[i] = (FloatT)sourceArray[i] * floatNormalizer;
 }
 
 //! Converts between two BufferT's of different precision (ex. float to double).  The number of frames converted is the lesser of the two. The number of channels converted is the lesser of the two.
@@ -95,7 +116,7 @@ void convertInt24ToFloat( const char *sourceArray, FloatT *destArray, size_t len
 
 	for( size_t i = 0; i < length; i++ ) {
 		int32_t sample = (int32_t)( ( (int32_t)sourceArray[2] ) << 16 ) | ( ( (int32_t)(uint8_t)sourceArray[1] ) << 8 ) | ( (int32_t)(uint8_t)sourceArray[0] );
-		destArray[i] = sample * floatNormalizer;
+		destArray[i] = (FloatT)sample * floatNormalizer;
 		sourceArray += 3;
 	}
 }
@@ -174,6 +195,22 @@ void deinterleave( const int16_t *interleavedInt16SourceArray, FloatT *nonInterl
 	}
 }
 
+//! De-interleaves \a numCopyFrames of \a interleavedInt24SourceArray and converts from 24-bit int to floating point precision at the same time, placing the result in \a nonInterleavedFloatDestArray. \a numFramesPerChannel and \a numChannels describe the layout of the non-interleaved array.
+template<typename FloatT>
+void deinterleaveInt24ToFloat( const char *interleavedInt24SourceArray, FloatT *nonInterleavedFloatDestArray, size_t numFramesPerChannel, size_t numChannels, size_t numCopyFrames )
+{
+	const FloatT floatNormalizer = (FloatT)1 / (FloatT)8388607;
+
+	for( size_t ch = 0; ch < numChannels; ch++ ) {
+		size_t x = ch;
+		FloatT *destChannel = &nonInterleavedFloatDestArray[ch * numFramesPerChannel];
+		for( size_t i = 0; i < numCopyFrames; i++ ) {
+			int32_t sample = (int32_t)( ( (int32_t)interleavedInt24SourceArray[2] ) << 16 ) | ( ( (int32_t)(uint8_t)interleavedInt24SourceArray[1] ) << 8 ) | ( (int32_t)(uint8_t)interleavedInt24SourceArray[0] );
+			destChannel[i] = (FloatT)sample * floatNormalizer;
+			x += numChannels;
+		}
+	}
+}
 //! Interleaves \a nonInterleavedSource, placing the result in \a interleavedDest.
 template<typename T>
 void interleaveBuffer( const BufferT<T> *nonInterleavedSource, BufferInterleavedT<T> *interleavedDest )

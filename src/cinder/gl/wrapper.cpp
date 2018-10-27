@@ -56,7 +56,7 @@ void enableVerticalSync( bool enable )
 	if( wglext_EXT_swap_control )
 		::wglSwapIntervalEXT( sync );
 #elif defined( CINDER_LINUX )
-	#if ! defined( CINDER_LINUX_EGL_ONLY )
+	#if ! defined( CINDER_LINUX_EGL_ONLY ) && ! defined( CINDER_HEADLESS_GL_OSMESA )
 		GLint sync = ( enable ) ? 1 : 0;
 		glfwSwapInterval( sync );
 	#endif
@@ -997,6 +997,27 @@ ivec3 getMaxComputeWorkGroupSize()
 }
 #endif // defined( CINDER_GL_HAS_COMPUTE_SHADER )
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// debug groups
+#if defined( CINDER_GL_HAS_KHR_DEBUG )
+void pushDebugGroup( const std::string &message )
+{
+	glPushDebugGroup( GL_DEBUG_SOURCE_APPLICATION, 0, -1, message.c_str() );
+}
+void pushDebugGroup( GLuint id, const std::string &message )
+{
+	glPushDebugGroup( GL_DEBUG_SOURCE_APPLICATION, id, -1, message.c_str() );
+}
+void pushDebugGroup( GLenum source, GLuint id, const std::string &message )
+{
+	glPushDebugGroup( source, id, -1, message.c_str() );
+}
+void popDebugGroup()
+{
+	glPopDebugGroup();
+}
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // toGL conversion functions

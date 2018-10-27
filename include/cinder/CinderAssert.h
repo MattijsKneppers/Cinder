@@ -33,6 +33,7 @@
 //
 // User-definable parameters:
 // - CI_DISABLE_ASSERTS: disables all asserts, they become no-ops (VERIFY variants still evaluate \a expr).
+// - CI_ENABLE_ASSERTS: forces asserts enabled, regardless of other build settings.
 // - CI_ENABLE_ASSERT_HANDLER: if this is set, users must define assertionFailed() and assertionFailedMessage()
 //	 to handle a failed assertion.
 // - CI_ASSERT_DEBUG_BREAK: overrides default assertion behavior to break into the debugger instead of
@@ -40,16 +41,18 @@
 
 #pragma once
 
-#if ! defined( NDEBUG ) && ! defined( CI_DISABLE_ASSERTS )
+#if ( ! defined( NDEBUG ) && ! defined( CI_DISABLE_ASSERTS ) ) || defined( CI_ENABLE_ASSERTS )
 
+	#include "cinder/Export.h"
 	#include "cinder/CurrentFunction.h"
 	#include <cassert>
 
 	// defined in CinderAssert.cpp
 	namespace cinder { namespace detail {
-		void assertionFailedBreak( char const *expr, char const *function, char const *file, long line );
-		void assertionFailedMessageBreak( char const *expr, char const *msg, char const *function, char const *file, long line );
-		void assertionFailedMessageAbort( char const *expr, char const *msg, char const *function, char const *file, long line );
+		CI_API void assertionFailedAbort( char const *expr, char const *function, char const *file, long line );
+		CI_API void assertionFailedMessageAbort( char const *expr, char const *msg, char const *function, char const *file, long line );
+		CI_API void assertionFailedBreak( char const *expr, char const *function, char const *file, long line );
+		CI_API void assertionFailedMessageBreak( char const *expr, char const *msg, char const *function, char const *file, long line );
 	} } // namespace cinder::detail
 
 	#if defined( CI_ASSERT_DEBUG_BREAK )
@@ -72,7 +75,7 @@
 
 	#else // defined( CI_ENABLE_ASSERT_HANDLER )
 
-		#define CI_ASSERT( expr )				assert( expr )
+		#define CI_ASSERT( expr )				( (expr) ? ( (void)0) : ::cinder::detail::assertionFailedAbort( #expr, CINDER_CURRENT_FUNCTION, __FILE__, __LINE__ ) )
 		#define CI_ASSERT_MSG( expr, msg )		( (expr) ? ( (void)0) : ::cinder::detail::assertionFailedMessageAbort( #expr, msg, CINDER_CURRENT_FUNCTION, __FILE__, __LINE__ ) )
 
 	#endif // defined( CI_ASSERT_DEBUG_BREAK )

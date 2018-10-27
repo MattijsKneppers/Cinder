@@ -42,7 +42,7 @@ class FboCubeMap;
 typedef std::shared_ptr<FboCubeMap>		FboCubeMapRef;
 
 //! Represents an OpenGL Renderbuffer, used primarily in conjunction with FBOs. Supported on OpenGL ES but multisampling is currently ignored. \ImplShared
-class Renderbuffer {
+class CI_API Renderbuffer {
   public:
 	//! Create a Renderbuffer \a width pixels wide and \a heigh pixels high, with an internal format of \a internalFormat, defaulting to GL_RGBA8, MSAA samples \a msaaSamples, and CSAA samples \a coverageSamples
 #if defined( CINDER_GL_ES_2 )
@@ -90,13 +90,13 @@ class Renderbuffer {
 	int					mSamples, mCoverageSamples;
 	std::string			mLabel; // debug label
 	
-	friend std::ostream& operator<<( std::ostream &os, const Renderbuffer &rhs );
+	friend CI_API std::ostream& operator<<( std::ostream &os, const Renderbuffer &rhs );
 };
 
-std::ostream& operator<<( std::ostream &os, const Renderbuffer &rhs );
+CI_API std::ostream& operator<<( std::ostream &os, const Renderbuffer &rhs );
 
 //! Represents an OpenGL Framebuffer Object.
-class Fbo : public std::enable_shared_from_this<Fbo> {
+class CI_API Fbo : public std::enable_shared_from_this<Fbo> {
   public:
 	struct Format;
 
@@ -171,13 +171,15 @@ class Fbo : public std::enable_shared_from_this<Fbo> {
 	//! Sets the debugging label associated with the Fbo. Calls glObjectLabel() when available.
 	void				setLabel( const std::string &label );
 	
-	//! Returns a copy of the pixels in \a attachment within \a area (cropped to the bounding rectangle of the attachment) as an 8-bit per channel Surface. \a attachment ignored on ES 2.
+	//! Returns a copy of the pixels in \a attachment within \a area (cropped to the bounding rectangle of the attachment) as a Surface8u. \a attachment ignored on ES 2.
 	Surface8u		readPixels8u( const Area &area, GLenum attachment = GL_COLOR_ATTACHMENT0 ) const;
-
+	//! Returns a copy of the pixels in \a attachment within \a area (cropped to the bounding rectangle of the attachment) as a Surface32f. \a attachment ignored on ES 2.
+	Surface32f		readPixels32f( const Area &area, GLenum attachment = GL_COLOR_ATTACHMENT0 ) const;
+	
 	//! \brief Defines the Format of the Fbo, which is passed in via create().
 	//!
 	//! The default provides an 8-bit RGBA color texture attachment and a 24-bit depth renderbuffer attachment, multi-sampling and stencil disabled.
-	struct Format {
+	struct CI_API Format {
 	  public:
 		//! Default constructor, sets the target to \c GL_TEXTURE_2D with an 8-bit color+alpha, a 24-bit depth texture, and no multisampling or mipmapping
 		Format();
@@ -252,7 +254,7 @@ class Fbo : public std::enable_shared_from_this<Fbo> {
 		//! Returns the debugging label associated with the Fbo.
 		const std::string&	getLabel() const { return mLabel; }
 		//! Sets the debugging label associated with the Fbo. Calls glObjectLabel() when available.
-		void				setLabel( const std::string &label );
+		void				setLabel( const std::string &label ) { mLabel = label; }
 		//! Sets the debugging label associated with the Fbo. Calls glObjectLabel() when available.
 		Format&				label( const std::string &label ) { setLabel( label ); return *this; }
 		
@@ -284,6 +286,8 @@ class Fbo : public std::enable_shared_from_this<Fbo> {
 	void		updateMipmaps( GLenum attachment ) const;
 	bool		checkStatus( class FboExceptionInvalidSpecification *resultExc );
 	void		setDrawBuffers( GLuint fbId, const std::map<GLenum,RenderbufferRef> &attachmentsBuffer, const std::map<GLenum,TextureBaseRef> &attachmentsTexture );
+	//! Helper function for readPixels8u() / readPixels32f(), returns read area
+	Area		prepareReadPixels( const Area &area, GLenum attachment ) const;
 
 	int					mWidth, mHeight;
 	Format				mFormat;
@@ -298,16 +302,15 @@ class Fbo : public std::enable_shared_from_this<Fbo> {
 
 	mutable bool		mNeedsResolve, mNeedsMipmapUpdate;
 	
-	static GLint		sMaxSamples, sMaxAttachments;
-	
-	friend std::ostream& operator<<( std::ostream &os, const Fbo &rhs );
+	friend CI_API std::ostream& operator<<( std::ostream &os, const Fbo &rhs );
 };
 
+CI_API std::ostream& operator<<( std::ostream &os, const Fbo &rhs );
 
 //! Helper class for implementing dynamic cube mapping
-class FboCubeMap : public Fbo {
+class CI_API FboCubeMap : public Fbo {
   public:
-	struct Format : private Fbo::Format {
+	struct CI_API Format : private Fbo::Format {
 		// Default constructor. Enables a depth RenderBuffer and a color CubeMap
 		Format();
 		
@@ -344,13 +347,13 @@ class FboCubeMap : public Fbo {
 	TextureCubeMapRef		mTextureCubeMap;
 };
 
-class FboException : public Exception {
+class CI_API FboException : public Exception {
   public:
 	FboException()	{}
 	FboException( const std::string &description ) : Exception( description )	{}
 };
 
-class FboExceptionInvalidSpecification : public FboException {
+class CI_API FboExceptionInvalidSpecification : public FboException {
   public:
 	FboExceptionInvalidSpecification()	{}
 	FboExceptionInvalidSpecification( const std::string &description ) : FboException( description )	{}
