@@ -677,6 +677,9 @@ void MovieBase::initFromLoader( const MovieLoader& loader, bool _videoOnly )
 bool MovieBase::isFormatSupported(AVURLAsset* asset) {
 	bool isSupported = ![QTMovieModernizer requiresModernization:asset.URL error:nil];
 #ifdef USE_HAP
+	if (isSupported) {
+		return true;
+	}
 	NSString* format = getVideoFormat(asset);
 	isSupported = isSupported || [hapFormats containsObject: format];
 #endif
