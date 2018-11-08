@@ -200,6 +200,27 @@ string ShaderPreprocessor::parse( const std::string &source, const fs::path &sou
 		return directives + result;
 	}
 }
+	
+string ShaderPreprocessor::parse( const std::string &source, const map<string, string> &includes) {
+	
+	string directives;
+	string sourceBody;
+	int versionNumber = -1;
+	int lineNumberStart;
+	
+	parseDirectives( source, "<file not from disk>", &directives, &sourceBody, &versionNumber, &lineNumberStart );
+	if( directives.empty() ) {
+		// There were no directives added, parse original source for includes
+		return parseTopLevel( source, lineNumberStart, versionNumber, includes );
+	}
+	else {
+		// Parse the remaining source and then append it to the directives string
+		string result = parseTopLevel( sourceBody, lineNumberStart, versionNumber, includes );
+		return directives + result;
+	}
+	
+	//return parseDirectives( parseRecursive( source, includes ) );
+}
 
 // - returns directives string and remaining source separately, so that parseTopLevel can start after the directives we've added
 // - lineNumberStart indicates what value a #line directive should have after parsing #include statements
@@ -270,6 +291,7 @@ string ShaderPreprocessor::parseTopLevel( const string &source, const fs::path &
 	return readStream( input, sourcePath, lineNumberStart, versionNumber, includedFiles );
 }
 
+	
 string ShaderPreprocessor::parseRecursive( const fs::path &includePath, const fs::path &currentDirectory, int versionNumber, set<fs::path> &includeTree )
 {	
 	string output;
@@ -322,6 +344,62 @@ string ShaderPreprocessor::parseRecursive( const fs::path &includePath, const fs
 
 std::string ShaderPreprocessor::readStream( std::istream &input, const fs::path &sourcePath, int lineNumberStart, int versionNumber, set<fs::path> &includeTree )
 {
+    // go through each line and process includes
+    string line;
+    int lineNumber = lineNumberStart;
+    stringstream output;
+    
+    while( getline( input, line ) ) {
+        std::string includeFilePath;
+        if( findIncludeStatement( line, &includeFilePath ) ) {
+            int numIncludesBefore = (int)includeTree.size();
+            output << parseRecursive( includeFilePath, sourcePath.parent_path(), versionNumber, includeTree );
+            output << getLineDirective( sourcePath, lineNumber, numIncludesBefore, versionNumber );
+        }
+        else
+            output << line << "\n";
+        
+        lineNumber++;
+    }
+    
+    return output.str();
+}
+    
+string ShaderPreprocessor::parseTopLevel( const string &source, int lineNumberStart, int versionNumber, map<string, string> includes )
+{
+    istringstream input( source );
+    return readStream( input, lineNumberStart, versionNumber, includes );
+}
+
+string ShaderPreprocessor::parseRecursive( const string &source, map<string, string> includes )
+{
+	stringstream output;
+	istringstream input( source );
+	
+	// go through each line and process includes
+	string line;
+	
+	size_t lineNumber = 1;
+	
+	while( getline( input, line ) ) {
+		std::string includeFilePath;
+		if( findIncludeStatement( line, &includeFilePath ) ) {
+			if (includes.count(includeFilePath) == 0) throw ShaderPreprocessorExc( "Failed to find source in provided includes map for include: " + includeFilePath );
+			output << parseRecursive( includes[includeFilePath], includes );
+			output << "#line " << lineNumber << endl;
+		}
+		else
+			output << line;
+		
+		output << endl;
+		lineNumber++;
+	}
+	
+	return output.str();
+}
+	
+std::string ShaderPreprocessor::readStream( std::istream &input, int lineNumberStart, int versionNumber, map<string, string> includes )
+{
 	// go through each line and process includes
 	string line;
 	int lineNumber = lineNumberStart;
@@ -330,9 +408,9 @@ std::string ShaderPreprocessor::readStream( std::istream &input, const fs::path 
 	while( getline( input, line ) ) {
 		std::string includeFilePath;
 		if( findIncludeStatement( line, &includeFilePath ) ) {
-			int numIncludesBefore = (int)includeTree.size();
-			output << parseRecursive( includeFilePath, sourcePath.parent_path(), versionNumber, includeTree );
-			output << getLineDirective( sourcePath, lineNumber, numIncludesBefore, versionNumber );
+			int numIncludesBefore = 0;
+			output << parseRecursive( includeFilePath, includes );
+			output << getLineDirective( "<file not form disk>", lineNumber, numIncludesBefore, versionNumber );
 		}
 		else
 			output << line << "\n";
