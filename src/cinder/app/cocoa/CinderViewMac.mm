@@ -572,7 +572,7 @@ using namespace cinder::app;
 	}
 	[self updateActiveTouches:event];
 	if( mDelegate && ( ! touchList.empty() ) ) {
-		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList );
+		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList, event );
 		[mDelegate touchesBegan:&touchEvent];
 	}
 }
@@ -592,7 +592,7 @@ using namespace cinder::app;
 	}
 	[self updateActiveTouches:event];
 	if( mDelegate && ( ! touchList.empty() ) ) {
-		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList );
+		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList, event );
 		[mDelegate touchesMoved:&touchEvent];
 	}
 }
@@ -614,7 +614,7 @@ using namespace cinder::app;
 
 	[self updateActiveTouches:event];
 	if( mDelegate && ( ! touchList.empty() ) ) {
-		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList );
+		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList, event );
 		[mDelegate touchesEnded:&touchEvent];
 	}
 }
@@ -636,7 +636,7 @@ using namespace cinder::app;
 
 	[self updateActiveTouches:event];
 	if( mDelegate && ( ! touchList.empty() ) ) {
-		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList );
+		cinder::app::TouchEvent touchEvent( [mDelegate getWindowRef], touchList, event );
 		[mDelegate touchesEnded:&touchEvent];
 	}
 }

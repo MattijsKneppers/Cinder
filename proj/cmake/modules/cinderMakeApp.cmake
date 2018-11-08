@@ -22,29 +22,42 @@ function( ci_make_app )
 	option( CINDER_COPY_ASSETS "Copy assets to a folder next to the application. Default is OFF, and a symlink is created that points to the original assets folder." OFF )
 	include( "${ARG_CINDER_PATH}/proj/cmake/configure.cmake" )
 
-	if( "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" STREQUAL "" )
-		if( DEFINED ENV{CLION_IDE} )
-			# By default, CLion places its binary outputs in a global cache location, where assets can't be found in the current
-			# folder heirarchy. So we override that, unless the user has specified a custom binary output dir (then they're on their own).
-			set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/${CMAKE_BUILD_TYPE} )
-			# message( WARNING "CLion detected, set CMAKE_RUNTIME_OUTPUT_DIRECTORY to: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" )
-		else()
-            if( ( "${CMAKE_GENERATOR}" MATCHES "Visual Studio.+" ) OR ( "Xcode" STREQUAL "${CMAKE_GENERATOR}" ) )
-			    set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} )
-            else()
-			    # Append the build type to the output dir
-			    set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} )
-            endif()
-			message( STATUS "set CMAKE_RUNTIME_OUTPUT_DIRECTORY to: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" )
+	# Give the user the option to define with which build type of Cinder the application should link.
+	# By default the application will link with Cinder based on CMAKE_CURRENT_BUILD_TYPE.
+	# Use CINDER_APP_LINK_RELEASE or CINDER_APP_LINK_DEBUG to force the app to link with a specific build version of Cinder.
+	#
+	# In order to achieve this we override the build type which is embedded
+	# in the CINDER_LIB_DIRECTORY path and included from the configure.cmake file.
+	#
+	# Disabling this option on MSW since the platform doesn't properly support mixing Debug and Release versions.
+	if( NOT CINDER_MSW )
+		get_filename_component( CINDER_LIB_PARENT_DIR "${CINDER_LIB_DIRECTORY}" DIRECTORY )
+		if( CINDER_APP_LINK_RELEASE )
+			set( CINDER_LIB_DIRECTORY "${CINDER_LIB_PARENT_DIR}/Release" )
+			message( "Forcing application to link with Release build of Cinder." )
+		elseif( CINDER_APP_LINK_DEBUG )
+			set( CINDER_LIB_DIRECTORY "${CINDER_LIB_PARENT_DIR}/Debug" )
+			message( "Forcing application to link with Debug build of Cinder." )
 		endif()
 	endif()
 
+	if( "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" STREQUAL "" )
+		if( ( "${CMAKE_GENERATOR}" MATCHES "Visual Studio.+" ) OR ( "Xcode" STREQUAL "${CMAKE_GENERATOR}" ) )
+			set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} )
+		else()
+			# Append the build type to the output dir
+			set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} )
+		endif()
+	endif()
+
+	# place the binary one level deeper, so that the assets folder can live next to it when building out-of-source.
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${ARG_APP_NAME} )
 
 	ci_log_v( "APP_NAME: ${ARG_APP_NAME}" )
 	ci_log_v( "SOURCES: ${ARG_SOURCES}" )
 	ci_log_v( "INCLUDES: ${ARG_INCLUDES}" )
 	ci_log_v( "LIBRARIES: ${ARG_LIBRARIES}" )
+	ci_log_v( "RESOURCES: ${ARG_RESOURCES}" )
 	ci_log_v( "CINDER_PATH: ${ARG_CINDER_PATH}" )
 	ci_log_v( "CMAKE_RUNTIME_OUTPUT_DIRECTORY: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" )
 	ci_log_v( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -52,6 +65,13 @@ function( ci_make_app )
 	ci_log_v( "CINDER_LIB_DIRECTORY: ${CINDER_LIB_DIRECTORY}" )
 	ci_log_v( "CINDER BLOCKS: ${ARG_BLOCKS}" )
 	ci_log_v( "ASSETS_PATH: ${ARG_ASSETS_PATH}" )
+
+	# This ensures that the application will link with the correct version of Cinder
+	# based on the current build type without the need to remove the entire build folder
+	# when switching build type after an initial configuration. See PR #1518 for more info.
+	if( cinder_DIR )
+		unset( cinder_DIR CACHE )
+	endif()
 
 	# pull in cinder's exported configuration
 	if( NOT TARGET cinder )
@@ -84,17 +104,17 @@ function( ci_make_app )
 				message( "resources destination path exists, removing old first." )
 			endif()
 
-			file( COPY "${ARG_RESOURCES}" DESTINATION "${RESOURCES_DEST_PATH}" )
+			file( COPY ${ARG_RESOURCES} DESTINATION "${RESOURCES_DEST_PATH}" )
 
 			unset( ARG_RESOURCES ) # Don't allow resources to be added to the executable on linux
 		endif()
-	elseif( CINDER_MSW )		
+	elseif( CINDER_MSW )
 		if( MSVC )
 			# Override the default /MD with /MT
-			foreach( 
+			foreach(
 				flag_var
-				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO 
-				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO 
+				CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+				CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
 			)
 				if( ${flag_var} MATCHES "/MD" )
 					string( REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}" )
@@ -102,7 +122,7 @@ function( ci_make_app )
 				endif()
 			endforeach()
 			# Force synchronous PDB writes
-			add_compile_options( /FS ) 
+			add_compile_options( /FS )
 			# Force multiprocess compilation
 			add_compile_options( /MP )
 			# Add lib dirs
@@ -118,9 +138,9 @@ function( ci_make_app )
 	target_include_directories( ${ARG_APP_NAME} PUBLIC ${ARG_INCLUDES} )
 	target_link_libraries( ${ARG_APP_NAME} cinder ${ARG_LIBRARIES} )
 
-	# Ignore Specific Default Libraries
 	if( MSVC )
-		set_target_properties( ${ARG_APP_NAME} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCPMT" )
+		# Ignore Specific Default Libraries for Debug build
+		set_target_properties( ${ARG_APP_NAME} PROPERTIES LINK_FLAGS_DEBUG "/NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCPMT" )
 	endif()
 
 	# Blocks are first searched relative to the sample's CMakeLists.txt file, then within cinder's blocks folder
@@ -177,10 +197,8 @@ function( ci_make_app )
 	get_filename_component( ASSETS_DEST_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets" ABSOLUTE )
 	if( EXISTS "${ARG_ASSETS_PATH}" AND IS_DIRECTORY "${ARG_ASSETS_PATH}" )
 
-		message( "ARG_ASSETS_PATH: ${ARG_ASSETS_PATH}, ASSETS_DEST_PATH: ${ASSETS_DEST_PATH}" )
-
 		if( EXISTS "${ASSETS_DEST_PATH}" )
-			message( STATUS "assets destination path already exists, removing first." )
+			ci_log_v( "assets destination path already exists, removing first." )
 			file( REMOVE_RECURSE "${ASSETS_DEST_PATH}" )
 		endif()
 
@@ -190,14 +208,48 @@ function( ci_make_app )
 
 			file( COPY "${ARG_ASSETS_PATH}" DESTINATION "${ASSETS_DEST_PATH}" )
 		else()
-			# make a symlink
-			execute_process(
-					COMMAND "${CMAKE_COMMAND}" "-E" "create_symlink" "${ARG_ASSETS_PATH}" "${ASSETS_DEST_PATH}"
-					RESULT_VARIABLE resultCode
-			)
+			if( CINDER_MSW )
+				# Get OS dependent path to use in `execute_process`
+				file( TO_NATIVE_PATH "${ASSETS_DEST_PATH}" link )
+				file( TO_NATIVE_PATH "${ARG_ASSETS_PATH}" target )
+				set( link_cmd cmd.exe /c mklink /J ${link} ${target} )
 
-			if( NOT resultCode EQUAL 0 )
-			    message( WARNING "Failed to symlink '${ARG_ASSETS_PATH}' to '${ASSETS_DEST_PATH}', result: ${resultCode}" )
+				# it appears the file( REMOVE_RECURSE ) command above doesn't work with windows junctions,
+				# so remove it using a native command if it still exists.
+				if( EXISTS "${ASSETS_DEST_PATH}" )
+					ci_log_v( "assets path still exists, attempting to remove it again.." )
+					set( rmdir_cmd cmd.exe /c rmdir ${link} )
+					execute_process(
+						COMMAND ${rmdir_cmd}
+						RESULT_VARIABLE resultCode
+						ERROR_VARIABLE errorMessage
+					)
+
+					if( NOT resultCode EQUAL 0 )
+					    message( WARNING "\nFailed to rmdir '${ARG_ASSETS_PATH}'" )
+					endif()
+				endif()
+
+				# make a windows symlink using mklink
+				execute_process(
+					COMMAND ${link_cmd}
+					RESULT_VARIABLE resultCode
+					ERROR_VARIABLE errorMessage
+				)
+
+				if( NOT resultCode EQUAL 0 )
+				    message( WARNING "\nFailed to symlink '${ARG_ASSETS_PATH}' to '${ASSETS_DEST_PATH}', result: ${resultCode} error: ${errorMessage}" )
+				endif()
+			else()
+				# make a symlink
+				execute_process(
+						COMMAND "${CMAKE_COMMAND}" "-E" "create_symlink" "${ARG_ASSETS_PATH}" "${ASSETS_DEST_PATH}"
+						RESULT_VARIABLE resultCode
+				)
+
+				if( NOT resultCode EQUAL 0 )
+				    message( WARNING "Failed to symlink '${ARG_ASSETS_PATH}' to '${ASSETS_DEST_PATH}', result: ${resultCode}" )
+				endif()
 			endif()
 		endif()
 	endif()

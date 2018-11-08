@@ -30,27 +30,101 @@
 #include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
 #include "cinder/msw/CinderMsw.h"
-
-#include <setupapi.h>
-#pragma comment(lib, "setupapi.lib")
+#include "cinder/app/App.h" // For dispatching device activated / deactivated signals. TODO: remove once those are formalized
 
 #include <initguid.h> // must be included before mmdeviceapi.h for the pkey defines to be properly instantiated. Both must be first included from a translation unit.
 #include <mmdeviceapi.h>
 #include <Functiondiscoverykeys_devpkey.h>
+#include <Audioclient.h>
 
-// TODO: I don't know of any way to get a device's preferred blocksize on windows, if it exists.
-// - if it doesn't need a way to tell the user they should not listen to this value,
-//   or we can use a pretty standard default (like 512 or 1024).
-// - IAudioClient::GetBufferSize seems to be a possiblity, needs to be activated first
-#define PREFERRED_FRAMES_PER_BLOCK 512
+#define ASSERT_HR_OK( hr ) CI_ASSERT_MSG( hr == S_OK, hresultToString( hr ) )
 
 using namespace std;
 
 namespace cinder { namespace audio { namespace msw {
 
+struct DeviceManagerWasapi::Impl : public ::IMMNotificationClient {
+	Impl( DeviceManagerWasapi *parent )
+		: mParent( parent )
+	{}
+
+	const DeviceRef& getDevice( const std::wstring &enpointId );
+
+	// IMMNotificationClient methods
+	STDMETHOD_(ULONG, AddRef)();
+	STDMETHOD_(ULONG, Release)();
+	STDMETHOD(QueryInterface)(REFIID iid, void** object);
+	STDMETHOD(OnDeviceStateChanged)(LPCWSTR device_id, DWORD new_state);
+	STDMETHOD(OnDefaultDeviceChanged)(EDataFlow flow, ERole role, LPCWSTR new_default_device_id);
+	STDMETHOD(OnDeviceAdded)(LPCWSTR device_id);
+	STDMETHOD(OnDeviceRemoved)(LPCWSTR device_id);
+	STDMETHOD(OnPropertyValueChanged)(LPCWSTR device_id, const PROPERTYKEY key);
+
+	DeviceManagerWasapi*							mParent = nullptr;
+	ci::msw::ManagedComPtr<::IMMDeviceEnumerator>	mIMMDeviceEnumerator;
+};
+
+namespace {
+
+const char*	deviceStateToStr( DWORD state )
+{
+	switch( state ) {
+		case DEVICE_STATE_ACTIVE:		return "ACTIVE";
+		case DEVICE_STATE_DISABLED:		return "DISABLED";
+		case DEVICE_STATE_NOTPRESENT:	return "NOTPRESENT";
+		case DEVICE_STATE_UNPLUGGED:	return "UNPLUGGED";
+		default:						break;
+	}
+
+	return "(unknown)";
+}
+
+const char*	deviceFlowToStr( EDataFlow flow )
+{
+	switch( flow ) {
+		case eRender:		return "eRender";
+		case eCapture:		return "eCapture";
+		default:			break;
+	}
+
+	return "(unknown)";
+}
+
+const char*	deviceRoloToStr( ERole role )
+{
+	switch( role ) {
+		case eConsole:			return "eConsole";
+		case eMultimedia:		return "eMultimedia";
+		case eCommunications:	return "eCommunications";
+		default:				break;
+	}
+
+	return "(unknown)";
+}
+
+} // anonymouse namespace
+
 // ----------------------------------------------------------------------------------------------------
-// DeviceManagerWasapi
+// DeviceManagerWasapi Public
 // ----------------------------------------------------------------------------------------------------
+
+DeviceManagerWasapi::DeviceManagerWasapi()
+	: mImpl( new Impl( this ) )
+{
+	ci::msw::initializeCom();
+
+	::IMMDeviceEnumerator *enumerator;
+	HRESULT hr = ::CoCreateInstance( __uuidof(::MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(::IMMDeviceEnumerator), (void**)&enumerator );
+	CI_ASSERT( hr == S_OK );
+	mImpl->mIMMDeviceEnumerator = ci::msw::makeComUnique( enumerator );	// TODO: use throughout
+
+	mImpl->mIMMDeviceEnumerator->RegisterEndpointNotificationCallback( mImpl.get() );
+}
+
+DeviceManagerWasapi::~DeviceManagerWasapi()
+{
+	mImpl->mIMMDeviceEnumerator->UnregisterEndpointNotificationCallback( mImpl.get() );
+}
 
 DeviceRef DeviceManagerWasapi::getDefaultOutput()
 {
@@ -106,8 +180,7 @@ DeviceRef DeviceManagerWasapi::getDefaultInput()
 const std::vector<DeviceRef>& DeviceManagerWasapi::getDevices()
 {
 	if( mDevices.empty() ) {
-		parseDevices( DeviceInfo::Usage::INPUT );
-		parseDevices( DeviceInfo::Usage::OUTPUT );
+		rebuildDeviceInfoSet();
 	}
 	return mDevices;
 }
@@ -151,23 +224,20 @@ size_t DeviceManagerWasapi::getFramesPerBlock( const DeviceRef &device )
 // - but this is a kludge to allow context's other samplerates / block sizes until Context handles it.
 void DeviceManagerWasapi::setSampleRate( const DeviceRef &device, size_t sampleRate )
 {
-	//throw AudioDeviceExc( "Samplerate cannot be changed for Wasapi devices in shared mode." );
 	getDeviceInfo( device ).mSampleRate = sampleRate;
-	emitParamsDidChange( device );
+
+	// emitParamsWillDidChange() will be called by Device::updatFormat() next
 }
 
 void DeviceManagerWasapi::setFramesPerBlock( const DeviceRef &device, size_t framesPerBlock )
 {
-	//throw AudioDeviceExc( "Frames per block changes not supported for Wasapi devices." );
-
-	// also temp kludge:
+	// TODO: this is a bit of a kludge - we can't check if this value will actually be accepted by the IAudioClient until
+	// Initialize() is called on it followed by GetBufferSize().
+	// - so for now OutputDeviceNode / InputDeviceNode will later try this value, and update it as necessary
+	// - later this should be done more in sync.
 	getDeviceInfo( device ).mFramesPerBlock = framesPerBlock;
-	emitParamsDidChange( device );
-}
 
-const std::wstring& DeviceManagerWasapi::getDeviceId( const DeviceRef &device )
-{
-	return getDeviceInfo( device ).mDeviceId;
+	// emitParamsWillDidChange() will be called by Device::updatFormat() next
 }
 
 shared_ptr<::IMMDevice> DeviceManagerWasapi::getIMMDevice( const DeviceRef &device )
@@ -186,12 +256,19 @@ shared_ptr<::IMMDevice> DeviceManagerWasapi::getIMMDevice( const DeviceRef &devi
 }
 
 // ----------------------------------------------------------------------------------------------------
-// Private
+// DeviceManagerWasapi Private
 // ----------------------------------------------------------------------------------------------------
 
 DeviceManagerWasapi::DeviceInfo& DeviceManagerWasapi::getDeviceInfo( const DeviceRef &device )
 {
 	return mDeviceInfoSet.at( device );
+}
+
+void DeviceManagerWasapi::rebuildDeviceInfoSet()
+{
+	mDeviceInfoSet.clear();
+	parseDevices( DeviceInfo::Usage::INPUT );
+	parseDevices( DeviceInfo::Usage::OUTPUT );
 }
 
 // This call is performed twice because a separate Device subclass is used for input and output
@@ -201,9 +278,6 @@ DeviceManagerWasapi::DeviceInfo& DeviceManagerWasapi::getDeviceInfo( const Devic
 void DeviceManagerWasapi::parseDevices( DeviceInfo::Usage usage )
 {
 	const size_t kMaxPropertyStringLength = 2048;
-
-	vector<wstring> deviceIds = parseDeviceIds( usage );
-
 
 	::IMMDeviceEnumerator *enumerator;
 	const ::CLSID CLSID_MMDeviceEnumerator = __uuidof( ::MMDeviceEnumerator );
@@ -215,6 +289,12 @@ void DeviceManagerWasapi::parseDevices( DeviceInfo::Usage usage )
 	::EDataFlow dataFlow = ( usage == DeviceInfo::Usage::INPUT ? eCapture : eRender );
 	::IMMDeviceCollection *devices;
 	hr = enumerator->EnumAudioEndpoints( dataFlow, DEVICE_STATE_ACTIVE, &devices );
+
+	// TODO: consider parsing all devices
+	// - so users can at least see a headphone jack if it is unplugged (only some sound cards act this way)
+	// - note that PKEY_AudioEngine_DeviceFormat returns null below when parsing an unplugged device
+	//hr = enumerator->EnumAudioEndpoints( dataFlow, DEVICE_STATEMASK_ALL, &devices );
+
 	CI_ASSERT( hr == S_OK );
 	auto devicesPtr = ci::msw::makeComUnique( devices );
 
@@ -244,20 +324,16 @@ void DeviceManagerWasapi::parseDevices( DeviceInfo::Usage usage )
 		LPWSTR endpointIdLpwStr;
 		hr = deviceImm->GetId( &endpointIdLpwStr );
 		CI_ASSERT( hr == S_OK );
+
+		DWORD endpointState;
+		hr = deviceImm->GetState( &endpointState );
+		CI_ASSERT( hr == S_OK );
+
 		devInfo.mEndpointId = wstring( endpointIdLpwStr );
 		devInfo.mKey = ci::msw::toUtf8String( devInfo.mEndpointId );
+		devInfo.mState = endpointState;
 		::CoTaskMemFree( endpointIdLpwStr );
 		
-		// Wasapi's device Id is actually a subset of the one xaudio needs, so we find and use the match.
-		// TODO: add xaudio-specific method to get the required string from device, which does the formatting
-		for( auto it = deviceIds.begin(); it != deviceIds.end(); ++it ) {
-			if( it->find( devInfo.mEndpointId ) != wstring::npos ) {
-				devInfo.mDeviceId = *it;
-				deviceIds.erase( it );
-				break;
-			}
-		}
-
 		::PROPVARIANT formatVar;
 		hr = properties->GetValue( PKEY_AudioEngine_DeviceFormat, &formatVar );
 		CI_ASSERT( hr == S_OK );
@@ -265,64 +341,149 @@ void DeviceManagerWasapi::parseDevices( DeviceInfo::Usage usage )
 
 		devInfo.mNumChannels = format->nChannels;
 		devInfo.mSampleRate = format->nSamplesPerSec;
-		devInfo.mFramesPerBlock = PREFERRED_FRAMES_PER_BLOCK;
+
+		// activate IAudioClient to get the default device period (for frames-per-block)
+		{
+			::IAudioClient *audioClient;
+			HRESULT hr = deviceImm->Activate( __uuidof( ::IAudioClient ), CLSCTX_ALL, NULL, (void**)&audioClient );
+			ASSERT_HR_OK( hr );
+
+			auto audioClientPtr = ci::msw::makeComUnique( audioClient );
+
+			::REFERENCE_TIME defaultDevicePeriod = 0; // engine time, this is for shared mode
+			::REFERENCE_TIME minDevicePeriod = 0; // this is for exclusive mode
+			hr = audioClient->GetDevicePeriod( &defaultDevicePeriod, &minDevicePeriod );
+			if( hr == AUDCLNT_E_UNSUPPORTED_FORMAT ) {
+				// noticed this once in a blue moon when a device is re-plugged in.
+				CI_LOG_W( "IAudioClient::GetDevicePeriod() failed with return code AUDCLNT_E_UNSUPPORTED_FORMAT for "
+					<< ( usage ==  DeviceInfo::Usage::INPUT ? "input" : "output" ) <<" Device named: '" << devInfo.mName << "'" );
+
+				devInfo.mFramesPerBlock = 512; // set to a reasonable default for windows.
+			}
+			else {
+				ASSERT_HR_OK( hr );
+				devInfo.mFramesPerBlock = hundredNanoSecondsToFrames( defaultDevicePeriod, devInfo.mSampleRate );
+			}
+		}
 
 		DeviceRef addedDevice = addDevice( devInfo.mKey );
 		auto result = mDeviceInfoSet.insert( make_pair( addedDevice, devInfo ) );
 	}
 }
 
-// This method uses the SetupDi api to recover device id strings that Xaudio2.8 needs for
-// creating a mastering voice with non-default device 
-vector<wstring> DeviceManagerWasapi::parseDeviceIds( DeviceInfo::Usage usage )
+// ----------------------------------------------------------------------------------------------------
+// DeviceManagerWasapi::Impl
+// ----------------------------------------------------------------------------------------------------
+
+const DeviceRef& DeviceManagerWasapi::Impl::getDevice( const std::wstring &enpointId )
 {
-	vector<wstring> result;
-	DWORD deviceIndex = 0;
-	::SP_DEVICE_INTERFACE_DATA devInterface = { 0 };
-	devInterface.cbSize = sizeof( ::SP_DEVICE_INTERFACE_DATA );
-
-	CONST ::GUID *devInterfaceGuid = ( usage == DeviceInfo::Usage::INPUT ? &DEVINTERFACE_AUDIO_CAPTURE : &DEVINTERFACE_AUDIO_RENDER );
-	::HDEVINFO devInfoSet = ::SetupDiGetClassDevs( devInterfaceGuid, 0, 0, DIGCF_DEVICEINTERFACE | DIGCF_PRESENT );
-	if( devInfoSet == INVALID_HANDLE_VALUE ) {
-		CI_LOG_E( "INVALID_HANDLE_VALUE, detailed error: " << GetLastError() );
-		CI_ASSERT( 0 );
-		return result;
-	}
-
-	while( true ) {
-		if( ! ::SetupDiEnumDeviceInterfaces( devInfoSet, 0, devInterfaceGuid, deviceIndex, &devInterface ) ) {
-			DWORD error = GetLastError();
-			if( error == ERROR_NO_MORE_ITEMS )
-				break;
-			else {
-				CI_LOG_E( "SetupDiEnumDeviceInterfaces returned error: " << error );
-				CI_ASSERT( 0 );
-			}
+	for( const auto &dp : mParent->mDeviceInfoSet ) {
+		if( dp.second.mEndpointId == enpointId ) {
+			return dp.first;
 		}
-		deviceIndex++;
-
-		// See how large a buffer we require for the device interface details (ignore error, it should be returning ERROR_INSUFFICIENT_BUFFER)
-		DWORD sizeDevInterface;
-		::SetupDiGetDeviceInterfaceDetail( devInfoSet, &devInterface, 0, 0, &sizeDevInterface, 0 );
-
-		shared_ptr<::SP_DEVICE_INTERFACE_DETAIL_DATA> interfaceDetail( (::SP_DEVICE_INTERFACE_DETAIL_DATA*)calloc( 1, sizeDevInterface ), free );
-		CI_ASSERT( interfaceDetail );
-		interfaceDetail->cbSize = sizeof( ::SP_DEVICE_INTERFACE_DETAIL_DATA );
-
-		::SP_DEVINFO_DATA devInfo = {0};
-		devInfo.cbSize = sizeof( ::SP_DEVINFO_DATA );
-
-		// If SetupDiGetDeviceInterfaceDetail returns false, that means it couldn't load this specific device detail and just move on before adding to result.
-		if( ! ::SetupDiGetDeviceInterfaceDetail( devInfoSet, &devInterface, interfaceDetail.get(), sizeDevInterface, 0, &devInfo ) )
-			continue;
-
-		result.push_back( wstring( interfaceDetail->DevicePath ) );
 	}
 
-	if( devInfoSet )
-		::SetupDiDestroyDeviceInfoList( devInfoSet );
+	static DeviceRef sNullDevice;
+	return sNullDevice;
+}
 
-	return result;
+// ----------------------------------------------------------------------------------------------------
+// DeviceManagerWasapi::Impl IMMNotificationClient implementation
+// ----------------------------------------------------------------------------------------------------
+
+// Implementation of IUnknown is trivial in this case.
+// See msdn.microsoft.com/en-us/library/windows/desktop/dd371403(v=vs.85).aspx
+
+ULONG DeviceManagerWasapi::Impl::AddRef()
+{
+	CI_ASSERT_NOT_REACHABLE();
+	return 1;
+}
+
+ULONG DeviceManagerWasapi::Impl::Release()
+{
+	CI_ASSERT_NOT_REACHABLE();
+	return 1;
+}
+
+HRESULT DeviceManagerWasapi::Impl::QueryInterface( REFIID iid, void** object )
+{
+	CI_ASSERT_NOT_REACHABLE();
+	if( iid == IID_IUnknown || iid == __uuidof( IMMNotificationClient ) ) {
+		*object = static_cast <IMMNotificationClient*>( this );
+	}
+	else {
+		return E_NOINTERFACE;
+	}
+	return S_OK;
+}
+
+STDMETHODIMP DeviceManagerWasapi::Impl::OnDeviceStateChanged( LPCWSTR device_id, DWORD new_state )
+{
+	std::string stateStr = deviceStateToStr( new_state );
+
+	auto device = getDevice( device_id );
+	if( ! device ) {
+		// device may not be present if it was unplugged or disabled
+		CI_LOG_I( "device with id not present, rebuilding device set.." );
+		mParent->rebuildDeviceInfoSet();
+	}
+
+	device = getDevice( device_id );
+	string devName = ( (bool)device ? device->getName() : "(???)" );
+	CI_LOG_I( "State changed to " << stateStr << " for device: " << devName );
+
+	return S_OK;
+}
+
+HRESULT DeviceManagerWasapi::Impl::OnDefaultDeviceChanged( EDataFlow flow, ERole role, LPCWSTR new_default_device_id )
+{
+#if 0
+	auto devName = getDevice( new_default_device_id )->getName();
+	
+	CI_LOG_I( "device name: " << devName << ", flow: " << deviceFlowToStr( flow ) << ", role: " << deviceRoloToStr( role ) );
+
+	if( new_default_device_id == NULL ) {
+		// The user has removed or disabled the default device for our
+		// particular role, and no other device is available to take that role.
+		CI_LOG_E( "All devices are disabled." );
+		return E_FAIL;
+	}
+
+	// TODO: if playing with a default device and user changes it, update to new default
+	if( flow == eRender && role == device_role_ ) {
+		// Initiate a stream switch if not already initiated by signaling the
+		// stream-switch event to inform the render thread that it is OK to
+		// re-initialize the active audio renderer. All the action takes place
+		// on the WASAPI render thread.
+		if( ! restart_rendering_mode_ ) {
+			restart_rendering_mode_ = true;
+			SetEvent( stream_switch_event_.Get() );
+		}
+	}
+#endif
+	return S_OK;
+}
+
+HRESULT DeviceManagerWasapi::Impl::OnDeviceAdded( LPCWSTR device_id )
+{
+	auto devName = getDevice( device_id )->getName();
+	CI_LOG_I( "device name: " << devName );
+	return S_OK;
+}
+
+HRESULT DeviceManagerWasapi::Impl::OnDeviceRemoved( LPCWSTR device_id )
+{
+	auto devName = getDevice( device_id )->getName();
+	CI_LOG_I( "device name: " << devName );
+	return S_OK;
+}
+
+HRESULT DeviceManagerWasapi::Impl::OnPropertyValueChanged( LPCWSTR device_id, const PROPERTYKEY key )
+{
+	//auto devName = getDevice( device_id )->getName();
+	//CI_LOG_I( "device name: " << devName );
+	return S_OK;
 }
 
 } } } // namespace cinder::audio::msw

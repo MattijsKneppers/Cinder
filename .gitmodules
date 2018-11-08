@@ -7,7 +7,7 @@
 [submodule "include/boost"]
 	path = include/boost
 	url = git://github.com/cinder/Cinder-Boost.git
-	branch = boost_1_58
+	branch = boost_1_60
 [submodule "src/hapinavf"]
 	path = src/hapinavf
 	url = https://github.com/MattijsKneppers/hap-in-avfoundation

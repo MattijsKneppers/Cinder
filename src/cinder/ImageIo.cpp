@@ -25,8 +25,7 @@
 #include "cinder/ImageIo.h"
 #include "cinder/Utilities.h"
 
-#include <boost/utility.hpp>
-#include <boost/type_traits/is_same.hpp>
+#include <iterator>
 #include <cctype>
 
 #if defined( CINDER_COCOA )
@@ -530,9 +529,9 @@ ImageSourceRef ImageIoRegistrar::Inst::createSource( DataSourceRef dataSource, I
 				try {
 					return (*(sourcesIt->second))( dataSource, options );
 				}
-				catch( ImageIoException &exc ) {
+				catch( ImageIoException & ) {
 					// if we're out of handlers, rethrow the exception, otherwise continue on
-					if( options.getThrowOnFirstException() || ( boost::next( sourcesIt ) == sIt->second.end() && mGenericSources.empty() ) )
+					if( options.getThrowOnFirstException() || ( std::next( sourcesIt ) == sIt->second.end() && mGenericSources.empty() ) )
 						throw;
 				}
 			}
@@ -544,14 +543,15 @@ ImageSourceRef ImageIoRegistrar::Inst::createSource( DataSourceRef dataSource, I
 		try {
 			return (*(genericIt->second))( dataSource, options );
 		}
-		catch( ImageIoException &exc ) {
+		catch( ImageIoException & ) {
 			// if we're out of handlers, rethrow the exception, otherwise continue on
-			if( options.getThrowOnFirstException() || boost::next( genericIt ) == mGenericSources.end() )
+			if( options.getThrowOnFirstException() || std::next( genericIt ) == mGenericSources.end() )
 				throw;
 		}
 	}
 
 	assert( 0 && "unreachable" );
+	return{};
 }
 
 void ImageIoRegistrar::registerSourceType( string extension, SourceCreationFunc func, int32_t priority )

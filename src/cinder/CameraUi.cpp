@@ -143,7 +143,7 @@ void CameraUi::mouseWheel( app::MouseEvent &event )
 	event.setHandled();
 }
 
-void CameraUi::mouseUp( const vec2 &mousePos )
+void CameraUi::mouseUp( const vec2 & /*mousePos*/ )
 {
 	mLastAction = ACTION_NONE;
 }
@@ -199,7 +199,7 @@ void CameraUi::mouseDrag( const vec2 &mousePos, bool leftDown, bool middleDown, 
 	mLastAction = action;
 
 	if( action == ACTION_ZOOM ) { // zooming
-		int mouseDelta = ( mousePos.x - mInitialMousePos.x ) + ( mousePos.y - mInitialMousePos.y );
+		auto mouseDelta = ( mousePos.x - mInitialMousePos.x ) + ( mousePos.y - mInitialMousePos.y );
 
 		float newPivotDistance = powf( 2.71828183f, 2 * -mouseDelta / length( vec2( getWindowSize() ) ) ) * mInitialPivotDistance;
 		vec3 oldTarget = mInitialCam.getEyePoint() + mInitialCam.getViewDirection() * mInitialPivotDistance;

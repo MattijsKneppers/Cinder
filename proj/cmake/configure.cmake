@@ -1,9 +1,11 @@
 # This file is consumed by the main libcinder cmake configuration and any other targets within the library that depend on it (such as samples and tests).
 # Other applications can include it as well to set the same build variables that libcinder uses
 
-set( CINDER_TARGET "" CACHE STRING "Target platform to build for." )
 option( CINDER_VERBOSE "Print verbose build configuration messages. " OFF )
 option( BUILD_SHARED_LIBS "Build Cinder as a shared library. " OFF )
+option( CINDER_DISABLE_AUDIO "Build Cinder without audio support. " OFF )
+option( CINDER_DISABLE_VIDEO "Build Cinder without video support. " OFF )
+option( CINDER_DISABLE_ANTTWEAKBAR "Build Cinder without AntTweakBar support. " OFF )
 
 include( ${CMAKE_CURRENT_LIST_DIR}/utilities.cmake )
 
@@ -18,7 +20,19 @@ endif()
 
 ci_log_v( "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 
-# If there's a target specified, try to build for that. Otherwise, build based on the current host OS.
+# Set default target to build for
+if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
+	set( CINDER_TARGET_DEFAULT "macosx" )
+elseif( CMAKE_SYSTEM_NAME MATCHES "Linux" )
+	set( CINDER_TARGET_DEFAULT "linux" )
+elseif( CMAKE_SYSTEM_NAME MATCHES "Windows" )
+	set( CINDER_TARGET_DEFAULT "msw" )
+else()
+	# no default target, user must specify
+	set( CINDER_TARGET_DEFAULT "" )
+endif()
+
+set( CINDER_TARGET ${CINDER_TARGET_DEFAULT} CACHE STRING "Target platform to build for. Default will match the current OS. Vaid options: linux, macosx, msw, ios, android" )
 if( CINDER_TARGET )
 	string( TOLOWER "${CINDER_TARGET}" CINDER_TARGET_LOWER )
 	if( "android" STREQUAL "${CINDER_TARGET_LOWER}" )
@@ -35,19 +49,7 @@ if( CINDER_TARGET )
 		message( FATAL_ERROR "unexpected CINDER_TARGET '${CINDER_TARGET}'." )
 	endif()
 else()
-	if( CMAKE_SYSTEM_NAME MATCHES "Darwin" )
-		set( CINDER_TARGET "macosx" )
-		set( CINDER_MAC TRUE )
-	elseif( CMAKE_SYSTEM_NAME MATCHES "Linux" )
-		set( CINDER_TARGET "linux" )
-		set( CINDER_LINUX TRUE )
-	elseif( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-		message( WARNING "CMake support on Windows is experimental and may be incomplete." )
-		set( CINDER_TARGET "msw" )
-		set( CINDER_MSW TRUE )
-	else()
-		message( FATAL_ERROR "CINDER_TARGET not defined, and no default for platform '${CMAKE_SYSTEM_NAME}.'" )
-	endif()
+	message( FATAL_ERROR "CINDER_TARGET not defined, and no default for platform '${CMAKE_SYSTEM_NAME}.'" )
 endif()
 
 # Configure which gl target to build for, currently only used on linux.
@@ -57,7 +59,7 @@ else()
 	set( CINDER_TARGET_GL_DEFAULT "" )
 endif()
 
-set( CINDER_TARGET_GL ${CINDER_TARGET_GL_DEFAULT} CACHE STRING "Target GL for the system. Valid options : ogl, es2, es3, es31, es32, es2-rpi" )
+set( CINDER_TARGET_GL ${CINDER_TARGET_GL_DEFAULT} CACHE STRING "Target GL for the system. Valid options: ogl, es2, es3, es31, es32, es2-rpi" )
 
 if( CINDER_TARGET_GL )
 	ci_log_v( "CINDER_TARGET_GL: ${CINDER_TARGET_GL}" )
@@ -89,6 +91,26 @@ else()
 	set( CINDER_GL_CORE TRUE )
 endif()
 
+
+# Enable headless GL rendering support.
+set( CINDER_HEADLESS_GL "" CACHE STRING "Enable headless rendering. Valid options: egl" )
+if( CINDER_HEADLESS_GL )
+	if( CINDER_LINUX )
+		string( TOLOWER "${CINDER_HEADLESS_GL}" CINDER_HEADLESS_GL_LOWER )
+		if( "egl" STREQUAL "${CINDER_HEADLESS_GL_LOWER}" )
+			set( CINDER_HEADLESS True )
+			set( CINDER_HEADLESS_GL_EGL True )
+		elseif( "osmesa" STREQUAL "${CINDER_HEADLESS_GL_LOWER}" )
+			set( CINDER_HEADLESS True )
+			set( CINDER_HEADLESS_GL_OSMESA True )
+		else()
+			message( FATAL_ERROR "Unsupported headless GL rendering option: " ${CINDER_HEADLESS_GL_LOWER} " Available options include: egl, ..." )
+		endif()
+	else()
+		message( FATAL_ERROR "Cinder headless GL rendering support is only available on Linux." )
+	endif()
+endif()
+
 # Configure platform variables needed by both libcinder and user projects.
 if( CINDER_LINUX )
 	# Find architecture name.
@@ -103,10 +125,10 @@ elseif( CINDER_ANDROID )
 	#set( CINDER_ANDROID_NDK_ARCH "armeabi-v7a" CACHE STRING "Android NDK target architecture." )
 	set( CINDER_TARGET_SUBFOLDER "android/android-${CINDER_ANDROID_NDK_PLATFORM}/${CINDER_ANDROID_NDK_ARCH}" )
 elseif( CINDER_MSW )
-    set( CINDER_ARCH "x86" )
-    if( CMAKE_CL_64 )
-        set( CINDER_ARCH "x64" )
-    endif()
+	set( CINDER_ARCH "x86" )
+	if( CMAKE_CL_64 )
+		set( CINDER_ARCH "x64" )
+	endif()
 	set( CINDER_TARGET_SUBFOLDER "msw/${CINDER_ARCH}" ) # TODO: place in msw/arch folder (x64 or x86)
 endif()
 

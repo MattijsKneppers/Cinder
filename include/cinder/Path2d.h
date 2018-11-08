@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2010, The Barbarian Group
+ Copyright (c) 2010, The Cinder Project, All rights reserved.
  All rights reserved.
 
  Redistribution and use in source and binary forms, with or without modification, are permitted provided that
@@ -32,7 +32,7 @@
 
 namespace cinder {
 
-class Path2d {
+class CI_API Path2d {
  public:
 	Path2d() {}
 	explicit Path2d( const BSpline2f &spline, float subdivisionStep = 0.01f );
@@ -87,6 +87,8 @@ class Path2d {
 	//! Returns a copy transformed by \a matrix.
 	Path2d		transformed( const mat3 &matrix ) const;
 
+	//! Returns a subsection of the Path2d starting from \a startT to \a endT, which lie in the range <tt>[0,1]</tt>.
+	Path2d		getSubPath( float startT, float endT ) const;
 
 	const std::vector<vec2>&	getPoints() const { return mPoints; }
 	std::vector<vec2>&			getPoints() { return mPoints; }
@@ -102,15 +104,29 @@ class Path2d {
 	const std::vector<SegmentType>&	getSegments() const { return mSegments; }
 	std::vector<SegmentType>&		getSegments() { return mSegments; }
 
-	void			removeSegment( size_t segment );
+	//! Appends a new segment of type \a segmentType to the Path2d. \a points must contain an appropriate number of points for the segment type. Note that while the first point for the segment is always required, it will only be used when the Path2d is initially empty.
+	void	appendSegment( SegmentType segmentType, const vec2 *points );
+	void	removeSegment( size_t segment );
 	
 	//! Returns the bounding box around all control points. As with Shape2d, note this is not necessarily the bounding box of the Path's shape.
 	Rectf	calcBoundingBox() const;
 	//! Returns the precise bounding box around the curve itself. Slower to calculate than calcBoundingBox().
 	Rectf	calcPreciseBoundingBox() const;	
 
-	//! Returns whether the point \a pt is contained within the boundaries of the path
-	bool	contains( const vec2 &pt ) const;
+	//! Returns whether the point \a pt is contained within the boundaries of the Path2d. If \a evenOddFill is \c true (the default) then Even-Odd fill rule is used, otherwise, the Winding fill rule is applied.
+	bool	contains( const vec2 &pt, bool evenOddFill = true ) const;
+
+	//! Returns the minimum distance from point \a pt to the Path2d
+	float	calcDistance( const vec2 &pt ) const;
+	//! Returns the minimum distance from point \a pt to segment \a segment
+	float	calcDistance( const vec2 &pt, size_t segment ) const;
+	//! Returns the minimum distance from the Shape2d to point \a pt. For points inside the Shape2d, the distance is negative.
+	float	calcSignedDistance( const vec2 &pt ) const;
+
+	//! Returns the point on the Path2d closest to point \a pt.
+	vec2	calcClosestPoint( const vec2 &pt ) const;
+	//! Returns the point on segment \a segment that is closest to point \a pt
+	vec2	calcClosestPoint( const vec2 &pt, size_t segment ) const { return calcClosestPoint( pt, segment, 0 ); }
 
 	//! Calculates the length of the Path2d
 	float	calcLength() const;
@@ -136,16 +152,25 @@ class Path2d {
 	friend class Shape2d;
 	friend class Path2dCalcCache;
 	
-	friend std::ostream& operator<<( std::ostream &out, const Path2d &p );
+	friend CI_API std::ostream& operator<<( std::ostream &out, const Path2d &p );
   private:
 	void	arcHelper( const vec2 &center, float radius, float startRadians, float endRadians, bool forward );
 	void	arcSegmentAsCubicBezier( const vec2 &center, float radius, float startRadians, float endRadians );
+	
+	//! Returns the minimum distance from point \a pt to segment \a segment. The \a firstPoint parameter can be used as an optimization if known, otherwise pass 0.
+	float	calcDistance( const vec2 &pt, size_t segment, size_t firstPoint ) const;
+
+	//! Calculates the winding number of \a pt, representing the total number of times the Path2d travels around \a pt
+	int		calcWinding( const ci::vec2 &pt, int *onCurveCount ) const;
+
+	//! Returns the point on segment \a segment that is closest to \a pt. The \a firstPoint parameter can be used as an optimization if known, otherwise pass 0.
+	vec2	calcClosestPoint( const vec2 &pt, size_t segment, size_t firstPoint ) const;
 	
 	std::vector<vec2>			mPoints;
 	std::vector<SegmentType>	mSegments;
 };
 
-inline std::ostream& operator<<( std::ostream &out, const Path2d &p )
+CI_API inline std::ostream& operator<<( std::ostream &out, const Path2d &p )
 {
 	if( p.mPoints.empty() )
 		return out;
@@ -176,7 +201,7 @@ inline std::ostream& operator<<( std::ostream &out, const Path2d &p )
 }
 
 //! Accelerates the calculation of various operations on Path2d. Useful if doing repeated calculations, otherwise just use Path2d member functions.
-class Path2dCalcCache {
+class CI_API Path2dCalcCache {
   public:
 	Path2dCalcCache( const Path2d &path );
 	
@@ -184,9 +209,9 @@ class Path2dCalcCache {
 	float			getLength() const { return mLength; }
 
 	//! Calculates the t-value corresponding to \a relativeTime in the range [0,1) within epsilon of \a tolerance. For example, \a relativeTime of 0.5f returns the t-value corresponding to half the length. \a maxIterations dictates the number of refinement loop iterations allowed, setting an upper bound for worst-case performance.
-	float			calcNormalizedTime( float relativeTime, bool wrap = true, float tolerance = 1.0e-03f, int maxIterations = 16 ) const;
+	float			calcNormalizedTime( float relativeTime, bool wrap = false, float tolerance = 1.0e-03f, int maxIterations = 16 ) const;
 	//! Calculates a t-value corresponding to arc length \a distance. If \a wrap then the t-value loops inside the 0-1 range as \a distance exceeds the arc length.
-	float			calcTimeForDistance( float distance, bool wrap = true, float tolerance = 1.0e-03f, int maxIterations = 16 ) const;
+	float			calcTimeForDistance( float distance, bool wrap = false, float tolerance = 1.0e-03f, int maxIterations = 16 ) const;
 	//! Returns the point on the curve at parameter \a t, which lies in the range <tt>[0,1]</tt>
 	vec2			getPosition( float t ) const { return mPath.getPosition( t ); }
 
@@ -196,7 +221,7 @@ class Path2dCalcCache {
 	std::vector<float>	mSegmentLengths;
 };
 
-class Path2dExc : public Exception {
+class CI_API Path2dExc : public Exception {
 };
 
 } // namespace cinder

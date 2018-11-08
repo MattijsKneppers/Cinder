@@ -19,11 +19,11 @@ list( APPEND SRC_SET_CINDER
 	${CINDER_SRC_DIR}/cinder/CinderMath.cpp
 	${CINDER_SRC_DIR}/cinder/Clipboard.cpp
 	${CINDER_SRC_DIR}/cinder/Color.cpp
-	${CINDER_SRC_DIR}/cinder/ConvexHull.cpp
 	${CINDER_SRC_DIR}/cinder/DataSource.cpp
 	${CINDER_SRC_DIR}/cinder/DataTarget.cpp
 	${CINDER_SRC_DIR}/cinder/Display.cpp
 	${CINDER_SRC_DIR}/cinder/Exception.cpp
+	${CINDER_SRC_DIR}/cinder/FileWatcher.cpp
 	${CINDER_SRC_DIR}/cinder/Font.cpp
 	${CINDER_SRC_DIR}/cinder/Frustum.cpp
 	${CINDER_SRC_DIR}/cinder/GeomIo.cpp
@@ -69,12 +69,6 @@ if( ( NOT CINDER_LINUX ) AND ( NOT CINDER_ANDROID ) )
 	)
 endif()
 
-if( ( NOT CINDER_MSW ) AND ( NOT CINDER_ANDROID ) )
-	list( APPEND SRC_SET_CINDER
-		${CINDER_SRC_DIR}/cinder/UrlImplCurl.cpp
-	)
-endif()
-
 list( APPEND CINDER_SRC_FILES   ${SRC_SET_CINDER} )
 source_group( "cinder" FILES    ${SRC_SET_CINDER} )
 
@@ -98,36 +92,44 @@ source_group( "cinder\\app" FILES   ${SRC_SET_CINDER_APP} )
 # cinder::audio
 # ----------------------------------------------------------------------------------------------------------------------
 
-list( APPEND SRC_SET_CINDER_AUDIO
-	${CINDER_SRC_DIR}/cinder/audio/ChannelRouterNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Context.cpp
-	${CINDER_SRC_DIR}/cinder/audio/DelayNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Device.cpp
-	${CINDER_SRC_DIR}/cinder/audio/FileOggVorbis.cpp
-	${CINDER_SRC_DIR}/cinder/audio/FilterNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/GenNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/InputNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Node.cpp
-	${CINDER_SRC_DIR}/cinder/audio/NodeMath.cpp
-	${CINDER_SRC_DIR}/cinder/audio/MonitorNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/OutputNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/PanNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Param.cpp
-	${CINDER_SRC_DIR}/cinder/audio/SamplePlayerNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/SampleRecorderNode.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Source.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Target.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Utilities.cpp
-	${CINDER_SRC_DIR}/cinder/audio/Voice.cpp
-	${CINDER_SRC_DIR}/cinder/audio/WaveTable.cpp
-	${CINDER_SRC_DIR}/cinder/audio/dsp/Biquad.cpp
-	${CINDER_SRC_DIR}/cinder/audio/dsp/Converter.cpp
-	${CINDER_SRC_DIR}/cinder/audio/dsp/Dsp.cpp
-	${CINDER_SRC_DIR}/cinder/audio/dsp/Fft.cpp
-)
+if( NOT CINDER_DISABLE_AUDIO )
+	list( APPEND SRC_SET_CINDER_AUDIO
+		${CINDER_SRC_DIR}/cinder/audio/ChannelRouterNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Context.cpp
+		${CINDER_SRC_DIR}/cinder/audio/DelayNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Device.cpp
+		${CINDER_SRC_DIR}/cinder/audio/FileOggVorbis.cpp
+		${CINDER_SRC_DIR}/cinder/audio/FilterNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/GenNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/InputNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Node.cpp
+		${CINDER_SRC_DIR}/cinder/audio/NodeMath.cpp
+		${CINDER_SRC_DIR}/cinder/audio/MonitorNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/OutputNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/PanNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Param.cpp
+		${CINDER_SRC_DIR}/cinder/audio/SamplePlayerNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/SampleRecorderNode.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Source.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Target.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Utilities.cpp
+		${CINDER_SRC_DIR}/cinder/audio/Voice.cpp
+		${CINDER_SRC_DIR}/cinder/audio/WaveTable.cpp
+	)
 
-list( APPEND CINDER_SRC_FILES           ${SRC_SET_CINDER_AUDIO} )
-source_group( "cinder\\audio" FILES     ${SRC_SET_CINDER_AUDIO} )
+	list( APPEND SRC_SET_CINDER_AUDIO_DSP
+		${CINDER_SRC_DIR}/cinder/audio/dsp/Biquad.cpp
+		${CINDER_SRC_DIR}/cinder/audio/dsp/Converter.cpp
+		${CINDER_SRC_DIR}/cinder/audio/dsp/Dsp.cpp
+		${CINDER_SRC_DIR}/cinder/audio/dsp/Fft.cpp
+	)
+
+	list( APPEND CINDER_SRC_FILES           ${SRC_SET_CINDER_AUDIO} )
+	source_group( "cinder\\audio" FILES     ${SRC_SET_CINDER_AUDIO} )
+
+	list( APPEND CINDER_SRC_FILES           	${SRC_SET_CINDER_AUDIO_DSP} )
+	source_group( "cinder\\audio\\dsp" FILES    ${SRC_SET_CINDER_AUDIO_DSP} )
+endif()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # cinder::gl
@@ -148,6 +150,7 @@ list( APPEND SRC_SET_CINDER_GL
 	${CINDER_SRC_DIR}/cinder/gl/Pbo.cpp
 	${CINDER_SRC_DIR}/cinder/gl/Query.cpp
 	${CINDER_SRC_DIR}/cinder/gl/scoped.cpp
+	${CINDER_SRC_DIR}/cinder/gl/Sampler.cpp
 	${CINDER_SRC_DIR}/cinder/gl/Shader.cpp
 	${CINDER_SRC_DIR}/cinder/gl/ShaderPreprocessor.cpp
 	${CINDER_SRC_DIR}/cinder/gl/Sync.cpp
@@ -341,7 +344,6 @@ if( NOT CINDER_FREETYPE_USE_SYSTEM )
 		${CINDER_SRC_DIR}/freetype/base/ftglyph.c
 		${CINDER_SRC_DIR}/freetype/base/ftgxval.c
 		${CINDER_SRC_DIR}/freetype/base/ftinit.c
-		${CINDER_SRC_DIR}/freetype/base/ftlcdfil.c
 		${CINDER_SRC_DIR}/freetype/base/ftmm.c
 		${CINDER_SRC_DIR}/freetype/base/ftotval.c
 		${CINDER_SRC_DIR}/freetype/base/ftpatent.c
@@ -373,21 +375,21 @@ if( NOT CINDER_FREETYPE_USE_SYSTEM )
 endif() # ! CINDER_FREETYPE_USE_SYSTEM
 
 list( APPEND SRC_SET_ZLIB
-	${CINDER_SRC_DIR}/zlib-1.2.8/adler32.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/compress.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/crc32.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/deflate.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/gzclose.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/gzlib.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/gzread.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/gzwrite.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/infback.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/inffast.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/inflate.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/inftrees.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/trees.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/uncompr.c
-	${CINDER_SRC_DIR}/zlib-1.2.8/zutil.c
+	${CINDER_SRC_DIR}/zlib/adler32.c
+	${CINDER_SRC_DIR}/zlib/compress.c
+	${CINDER_SRC_DIR}/zlib/crc32.c
+	${CINDER_SRC_DIR}/zlib/deflate.c
+	${CINDER_SRC_DIR}/zlib/gzclose.c
+	${CINDER_SRC_DIR}/zlib/gzlib.c
+	${CINDER_SRC_DIR}/zlib/gzread.c
+	${CINDER_SRC_DIR}/zlib/gzwrite.c
+	${CINDER_SRC_DIR}/zlib/infback.c
+	${CINDER_SRC_DIR}/zlib/inffast.c
+	${CINDER_SRC_DIR}/zlib/inflate.c
+	${CINDER_SRC_DIR}/zlib/inftrees.c
+	${CINDER_SRC_DIR}/zlib/trees.c
+	${CINDER_SRC_DIR}/zlib/uncompr.c
+	${CINDER_SRC_DIR}/zlib/zutil.c
 )
 
 list( APPEND CINDER_SRC_FILES           ${SRC_SET_ZLIB}	)
@@ -397,43 +399,47 @@ source_group( "thirdparty\\zlib" FILES  ${SRC_SET_ZLIB} )
 # r8brain
 # ----------------------------------------------------------------------------------------------------------------------
 
-list( APPEND SRC_SET_R8BRAIN
-	${CINDER_SRC_DIR}/r8brain/r8bbase.cpp
-)
+if( NOT CINDER_DISABLE_AUDIO )
+	list( APPEND SRC_SET_R8BRAIN
+		${CINDER_SRC_DIR}/r8brain/r8bbase.cpp
+	)
 
-list( APPEND CINDER_SRC_FILES               ${SRC_SET_R8BRAIN}	)
-source_group( "thirdparty\\r8brain" FILES   ${SRC_SET_R8BRAIN} )
+	list( APPEND CINDER_SRC_FILES               ${SRC_SET_R8BRAIN}	)
+	source_group( "thirdparty\\r8brain" FILES   ${SRC_SET_R8BRAIN} )
+endif()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # oggvorbis
 # ----------------------------------------------------------------------------------------------------------------------
 
-list( APPEND SRC_SET_OGGVORBIS
-	${CINDER_SRC_DIR}/oggvorbis/ogg/bitwise.c
-	${CINDER_SRC_DIR}/oggvorbis/ogg/framing.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/analysis.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/bitrate.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/block.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/codebook.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/envelope.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/floor0.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/floor1.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/info.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/lookup.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/lpc.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/lsp.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/mapping0.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/mdct.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/psy.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/registry.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/res0.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/sharedbook.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/smallft.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/synthesis.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/vorbisenc.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/vorbisfile.c
-	${CINDER_SRC_DIR}/oggvorbis/vorbis/window.c
-)
+if( NOT CINDER_DISABLE_AUDIO )
+	list( APPEND SRC_SET_OGGVORBIS
+		${CINDER_SRC_DIR}/oggvorbis/ogg/bitwise.c
+		${CINDER_SRC_DIR}/oggvorbis/ogg/framing.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/analysis.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/bitrate.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/block.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/codebook.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/envelope.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/floor0.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/floor1.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/info.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/lookup.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/lpc.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/lsp.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/mapping0.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/mdct.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/psy.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/registry.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/res0.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/sharedbook.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/smallft.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/synthesis.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/vorbisenc.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/vorbisfile.c
+		${CINDER_SRC_DIR}/oggvorbis/vorbis/window.c
+	)
 
-list( APPEND CINDER_SRC_FILES                   ${SRC_SET_OGGVORBIS} )
-source_group( "thirdparty\\oggvorbis" FILES     ${SRC_SET_OGGVORBIS} )
+	list( APPEND CINDER_SRC_FILES                   ${SRC_SET_OGGVORBIS} )
+	source_group( "thirdparty\\oggvorbis" FILES     ${SRC_SET_OGGVORBIS} )
+endif()

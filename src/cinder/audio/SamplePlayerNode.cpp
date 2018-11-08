@@ -55,12 +55,12 @@ void SamplePlayerNode::stop()
 
 void SamplePlayerNode::start( double when )
 {
-	getContext()->schedule( when, shared_from_this(), true, [this] { start(); } );
+	getContext()->scheduleEvent( when, shared_from_this(), true, [this] { start(); } );
 }
 
 void SamplePlayerNode::stop( double when )
 {
-	getContext()->schedule( when, shared_from_this(), false, [this] { stop(); } );
+	getContext()->scheduleEvent( when, shared_from_this(), false, [this] { stop(); } );
 }
 
 void SamplePlayerNode::setLoopBegin( size_t positionFrames )
@@ -248,17 +248,17 @@ void FilePlayerNode::initialize()
 			mSourceFile = mSourceFile->cloneWithSampleRate( sampleRate );
 
 		mNumFrames = mSourceFile->getNumFrames();
+
+		mIoBuffer.setSize( mSourceFile->getMaxFramesPerRead(), getNumChannels() );
+
+		for( size_t i = 0; i < getNumChannels(); i++ )
+			mRingBuffers.emplace_back( mSourceFile->getMaxFramesPerRead() * mRingBufferPaddingFactor );
+
+		mBufferFramesThreshold = mRingBuffers[0].getSize() / 2;
 	}
 
 	if( ! mLoopEnd  || mLoopEnd > mNumFrames )
 		mLoopEnd = mNumFrames;
-
-	mIoBuffer.setSize( mSourceFile->getMaxFramesPerRead(), getNumChannels() );
-
-	for( size_t i = 0; i < getNumChannels(); i++ )
-		mRingBuffers.emplace_back( mSourceFile->getMaxFramesPerRead() * mRingBufferPaddingFactor );
-
-	mBufferFramesThreshold = mRingBuffers[0].getSize() / 2;
 
 	if( mIsReadAsync ) {
 		mAsyncReadShouldQuit = false;
@@ -269,6 +269,7 @@ void FilePlayerNode::initialize()
 void FilePlayerNode::uninitialize()
 {
 	destroyReadThreadImpl();
+	mRingBuffers.clear();
 }
 
 void FilePlayerNode::enableProcessing()

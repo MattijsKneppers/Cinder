@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.0 FATAL_ERROR )
+cmake_minimum_required( VERSION 2.8 FATAL_ERROR )
 
 ci_log_v( "Building Cinder for ${CINDER_TARGET}" )
 
@@ -23,6 +23,7 @@ list( APPEND CINDER_INCLUDE_SYSTEM_INTERFACE
 # *_PRIVATE includes are used by cinder internally, user apps explicitly add these as needed.
 list( APPEND CINDER_INCLUDE_USER_PRIVATE
 	${CINDER_INC_DIR}
+	${CINDER_INC_DIR}/EGL-Registry
 	${CINDER_INC_DIR}/jsoncpp
 	${CINDER_INC_DIR}/tinyexr
 	${CINDER_SRC_DIR}/linebreak
@@ -63,7 +64,7 @@ else()
 endif()
 
 # declare whether AntTweakBar is available (isn't on mobile devices)
-if( CINDER_GL_ES )
+if( CINDER_GL_ES OR CINDER_DISABLE_ANTTWEAKBAR )
 	set( CINDER_ANTTWEAKBAR_ENABLED FALSE )
 else()
 	set( CINDER_ANTTWEAKBAR_ENABLED TRUE )

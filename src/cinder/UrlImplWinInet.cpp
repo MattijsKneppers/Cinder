@@ -145,8 +145,7 @@ IStreamUrlImplWinInet::IStreamUrlImplWinInet( const std::string &url, const std:
 				throw StreamExc();
 	}
 
-	mBufferSize = DEFAULT_BUFFER_SIZE;
-	mBuffer = (uint8_t*)malloc( mBufferSize );
+	mBuffer.resize(DEFAULT_BUFFER_SIZE);
 	mBufferOffset = 0;
 	mBufferedBytes = 0;
 	mBufferFileOffset = 0;
@@ -154,8 +153,6 @@ IStreamUrlImplWinInet::IStreamUrlImplWinInet( const std::string &url, const std:
 
 IStreamUrlImplWinInet::~IStreamUrlImplWinInet()
 {
-	if( mBuffer )
-		free( mBuffer );
 }
 
 bool IStreamUrlImplWinInet::isEof() const
@@ -200,32 +197,20 @@ void IStreamUrlImplWinInet::fillBuffer( int wantBytes ) const
 		return;
 	
 	// if we want more bytes than will fit in the rest of the buffer, let's make some room
-	if( mBufferSize - mBufferedBytes < wantBytes ) {
-		int bytesCulled = mBufferOffset;
-		memmove( mBuffer, &mBuffer[mBufferOffset], mBufferedBytes - bytesCulled );
-		mBufferedBytes -= bytesCulled;
+	if( wantBytes > (int)mBuffer.size() - mBufferedBytes ) {
+		memmove( mBuffer.data(), mBuffer.data() + mBufferOffset, mBufferedBytes - mBufferOffset );
+		mBufferedBytes -= mBufferOffset;
+		mBufferFileOffset += mBufferOffset;
 		mBufferOffset = 0;
-		mBufferFileOffset += bytesCulled;
 	}
 	
 	// now if we've made all the room there is to make, and we still aren't big enough, reallocate
-	if( wantBytes > mBufferSize - mBufferedBytes ) {
-		// not enough space in buffer
-		int oldBufferSize = mBufferSize;
-		while( mBufferSize - mBufferedBytes < wantBytes )
-			mBufferSize *= 2;
-		uint8_t *newBuff = reinterpret_cast<uint8_t*>( realloc( mBuffer, mBufferSize ) );
-		if( ! newBuff ) {
-			throw StreamExc();
-		}
-		else {
-			// realloc suceeded increase buffer size
-			mBuffer = newBuff;
-		}
+	if( wantBytes > (int)mBuffer.size() - mBufferedBytes ) {
+		mBuffer.resize( mBufferedBytes + wantBytes );
 	}
 	
 	do {
-		::DWORD bytesAvailable, bytesToRead, bytesRead;
+		::DWORD bytesAvailable, bytesRead;
 		if( ! ::InternetQueryDataAvailable( mRequest.get(), &bytesAvailable, 0, 0 ) )
 			throw StreamExc();
 		
@@ -234,8 +219,8 @@ void IStreamUrlImplWinInet::fillBuffer( int wantBytes ) const
 			break;
 		}
 		
-		bytesToRead = std::min<int>( bytesAvailable, wantBytes );
-		if( ! ::InternetReadFile( mRequest.get(), mBuffer + mBufferedBytes, bytesToRead, &bytesRead ) )
+		::DWORD bytesToRead = std::min<int>( bytesAvailable, wantBytes );
+		if( ! ::InternetReadFile( mRequest.get(), mBuffer.data() + mBufferedBytes, bytesToRead, &bytesRead ) )
 			throw StreamExc();
 		mBufferedBytes += bytesRead;
 		wantBytes -= bytesRead;
@@ -246,26 +231,26 @@ void IStreamUrlImplWinInet::fillBuffer( int wantBytes ) const
 
 void IStreamUrlImplWinInet::IORead( void *dest, size_t size )
 {
-	fillBuffer( size );
-	
+	fillBuffer( static_cast<int>( size ) );
+
 	// check if theres data in the buffer - if not fillBuffer() either errored or EOF
 	if( bufferDataRemaining() < (off_t)size )
 		throw StreamExc();
 
-	memcpy( dest, mBuffer + mBufferOffset, size );
-	mBufferOffset += size;
+	memcpy( dest, mBuffer.data() + mBufferOffset, size );
+	mBufferOffset += static_cast<int>( size );
 }
 
 size_t IStreamUrlImplWinInet::readDataAvailable( void *dest, size_t maxSize )
 {
-	fillBuffer( maxSize );
-	
+	fillBuffer( static_cast<int>( maxSize ) );
+
 	if( bufferDataRemaining() < (off_t)maxSize )
 		maxSize = bufferDataRemaining();
-		
-	memcpy( dest, mBuffer + mBufferOffset, maxSize );
-	
-	mBufferOffset += maxSize;
+
+	memcpy( dest, mBuffer.data() + mBufferOffset, maxSize );
+
+	mBufferOffset += static_cast<int>( maxSize );
 	return maxSize;
 }
 

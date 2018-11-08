@@ -110,12 +110,12 @@ typedef	 signals::Signal<void( FileDropEvent & ),	CollectorEvent<FileDropEvent> 
 typedef	 signals::Signal<void()>														EventSignalWindow;
 
 //! Thrown when an operation is performed on a WindowRef which refers to an invalid Window
-class ExcInvalidWindow : public cinder::Exception {
+class CI_API ExcInvalidWindow : public cinder::Exception {
 	virtual const char * what() const throw() { return "Invalid Window"; }
 };
 
 //! Options passed when entering fullscreen.
-struct FullScreenOptions {
+struct CI_API FullScreenOptions {
 	FullScreenOptions() : mKioskMode( true ), mSecondaryDisplayBlanking( false ), mExclusive( false )
 	{}
 
@@ -142,7 +142,7 @@ struct FullScreenOptions {
 	bool		mKioskMode, mSecondaryDisplayBlanking, mExclusive;
 };
 
-class Window : public std::enable_shared_from_this<Window> {
+class CI_API Window : public std::enable_shared_from_this<Window> {
   public:
 	// Parameters for a Window, which are used to create the physical window by the App
 	struct Format {
@@ -294,9 +294,12 @@ class Window : public std::enable_shared_from_this<Window> {
 	vec2	getCenter() const { return vec2( getWidth() / 2.0f, getHeight() / 2.0f ); }
 	//! Sets the position and size of the Window so that it spans all connected displays
 	void	spanAllDisplays();
-	
+	//! Returns the mouse position, in window coordinates measured in points. Can be negative or larger than window size if the mouse is outside of this window.
+	ivec2	getMousePos() const;
 	//! Returns the multiplier (typically 2 on high-density (Retina) displays, 1 otherwise) mapping points to pixels
 	float	getContentScale() const;
+	//! Returns a scalar mapped from points to pixels by multiplying by getContentScale()
+	int32_t	toPixels( int32_t s ) const { return static_cast<int32_t>( s * getContentScale() ); }
 	//! Returns a scalar mapped from points to pixels by multiplying by getContentScale()
 	float	toPixels( float s ) const { return s * getContentScale(); }
 	//! Returns a vec2 mapped from points to pixels by multiplying by getContentScale()
@@ -309,6 +312,8 @@ class Window : public std::enable_shared_from_this<Window> {
 	Rectf	toPixels( const Rectf &a ) const { return a * getContentScale(); }
 	//! Returns a scalar mapped from pixels to points by dividing by getContentScale()
 	float	toPoints( float s ) const { return s / getContentScale(); }
+	//! Returns a scalar mapped from points to pixels by multiplying by getContentScale()
+	int32_t	toPoints( int32_t s ) const { return static_cast<int32_t>( s / getContentScale() ); }
 	//! Returns a vec2 mapped from pixels to points by dividing by getContentScale()
 	vec2	toPoints( vec2 s ) const { return s / getContentScale(); }
 	//! Returns a ivec2 mapped from pixels to points by dividing by getContentScale()

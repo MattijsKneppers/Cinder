@@ -56,9 +56,9 @@ class Renderbuffer;
 
 class TextureBase;
 
-class Context {
+class CI_API Context {
   public:
-	struct PlatformData {
+	struct CI_API PlatformData {
 		PlatformData() : mDebug( false ), mObjectTracking( false ), mDebugLogSeverity( 0 ), mDebugBreakSeverity( 0 )
 		{}
 
@@ -277,6 +277,17 @@ class Context {
 	void		popActiveTexture( bool forceRestore = false );	
 	//! Returns the active texture unit with values relative to \c 0, \em not GL_TEXTURE0
 	uint8_t		getActiveTexture();
+
+#if defined( CINDER_GL_HAS_SAMPLERS )
+	//! Analogous to glBindSampler( \a textureUnit, \a samplerId )
+	void		bindSampler( uint8_t textureUnit, GLuint samplerId );
+	//! Duplicates and pushes the sampler binding for \a textureUnit, setting it to \a samplerId
+	void		pushSamplerBinding( uint8_t textureUnit, GLuint samplerId );
+	//! Pops the sampler binding \a textureUnit. If \a forceRestore then redundancy checks are skipped and the hardware state is always set.
+	void		popSamplerBinding( uint8_t textureUnit, bool forceRestore = false );
+	//! Returns the current sampler binding \a textureUnit. If not cached, queries the GL for the current value (and caches it).
+	GLuint		getSamplerBinding( uint8_t textureUnit );
+#endif // defined( CINDER_GL_HAS_SAMPLERS )
 
 	//! Analogous to glBindFramebuffer()
 	void		bindFramebuffer( const FboRef &fbo, GLenum target = GL_FRAMEBUFFER );
@@ -529,6 +540,10 @@ class Context {
 	std::map<uint8_t,std::map<GLenum,std::vector<GLint>>>	mTextureBindingStack;
 	std::vector<uint8_t>					mActiveTextureStack;
 	
+#if defined( CINDER_GL_HAS_SAMPLERS )
+	std::vector<std::vector<GLuint>>	mSamplerBindingStack;
+#endif	
+	
 	VaoRef						mDefaultVao;
 	VboRef						mDefaultArrayVbo[4], mDefaultElementVbo;
 	uint8_t						mDefaultArrayVboIdx;
@@ -572,7 +587,10 @@ class Context {
 	friend class				Texture2d;
 };
 
-class ExcContextAllocation : public Exception {
+class CI_API ExcContextAllocation : public Exception {
+};
+
+class CI_API ExcContextMakeCurrent : public Exception {
 };
 
 } } // namespace cinder::gl

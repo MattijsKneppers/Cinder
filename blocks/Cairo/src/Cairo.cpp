@@ -2041,7 +2041,7 @@ class SvgRendererCairo : public svg::Renderer {
 
 		mCtx.moveTo( mTextPenStack.back() );
 		// we can use a text path when the rotate is empty
-		if( abs(mTextRotationStack.back()) < 0.0001f ) {
+		if( fabs(mTextRotationStack.back()) < 0.0001f ) {
 			mCtx.textPath( span.getString() );
 			mTextPenStack.back() = mCtx.getCurrentPoint();
 		}
@@ -2100,7 +2100,7 @@ class SvgRendererCairo : public svg::Renderer {
 	}
 	
 	void	pushStyle( const svg::Style &style ) {}	
-	void	popStyle( const svg::Style &style ) {}
+	void	popStyle() {}
 	
 	void	pushStroke( const svg::Paint &paint ) { mStrokeStack.push_back( paint ); }
 	void	popStroke() { mStrokeStack.pop_back(); }

@@ -27,8 +27,6 @@
 #include "cinder/audio/Exception.h"
 #include "cinder/Noncopyable.h"
 
-#include <boost/logic/tribool.hpp>
-
 #include <memory>
 #include <atomic>
 #include <set>
@@ -56,9 +54,9 @@ typedef std::shared_ptr<class Node>				NodeRef;
 //! initialize() is called, uninitialize() is called before a Node is deallocated or channel counts change.
 //!
 //! \see InputNode, OutputNode
-class Node : public std::enable_shared_from_this<Node>, private Noncopyable {
+class CI_API Node : public std::enable_shared_from_this<Node>, private Noncopyable {
   public:
-	//! Used to specifiy how the corresponding channels are to be resolved between two connected Node's,
+	//! Used to specify how the corresponding channels are to be resolved between two connected Node's,
 	//! based on either a Node's input (the default), it's output, or specified by user.
 	enum class ChannelMode {
 		//! Number of channels has been specified by user or is non-settable.
@@ -70,27 +68,34 @@ class Node : public std::enable_shared_from_this<Node>, private Noncopyable {
 	};
 
 	struct Format {
-		Format() : mChannels( 0 ), mChannelMode( ChannelMode::MATCHES_INPUT ), mAutoEnable( boost::logic::indeterminate ) {}
+		Format()
+			: mChannels( 0 ), mChannelMode( ChannelMode::MATCHES_INPUT ), mAutoEnable( true ), mAutoEnableSet( false )
+		{}
 
 		//! Sets the number of channels for the Node.
 		Format& channels( size_t ch )							{ mChannels = ch; return *this; }
 		//! Controls how channels will be matched between connected Node's, if necessary. \see ChannelMode.
 		Format& channelMode( ChannelMode mode )					{ mChannelMode = mode; return *this; }
 		//! Whether or not the Node will be auto-enabled when connection changes occur.  Default is true for base \a Node class, although sub-classes may choose a different default.
-		Format& autoEnable( bool autoEnable = true )			{ mAutoEnable = autoEnable; return *this; }
+		Format& autoEnable( bool autoEnable = true )			{ setAutoEnable( autoEnable ); return *this; }
 
 		size_t			getChannels() const						{ return mChannels; }
 		ChannelMode		getChannelMode() const					{ return mChannelMode; }
-		boost::tribool	getAutoEnable() const					{ return mAutoEnable; }
+		bool			getAutoEnable() const					{ return mAutoEnable; }
+		//! Returns whether the user specified whether auto-enable is on or off. Some types of Nodes will choose
+		//! a different default for auto-enable, ex. the base Node type will turn it on by default, whereas `InputNode`s and `OutputNode`s
+		//! will turn it off and the user will have to manually set this property or call enable() on the Node themselves.
+		bool			isAutoEnableSet() const					{ return mAutoEnableSet; }
 
 		void setChannels( size_t ch )							{ mChannels = ch; }
 		void setChannelMode( ChannelMode mode )					{ mChannelMode = mode; }
-		void setAutoEnable( bool autoEnable	)					{ mAutoEnable = autoEnable; }
+		void setAutoEnable( bool autoEnable	)					{ mAutoEnable = autoEnable; mAutoEnableSet = true; }
 
 	  private:
 		size_t			mChannels;
 		ChannelMode		mChannelMode;
-		boost::tribool	mAutoEnable;
+		bool			mAutoEnable;
+		bool			mAutoEnableSet;
 	};
 
 	Node( const Format &format );
@@ -161,7 +166,7 @@ class Node : public std::enable_shared_from_this<Node>, private Noncopyable {
 	std::vector<NodeRef>		getOutputs() const;
 
 	//! Returns a string representing the name of this Node type. Default returns a demangled, compiler-specific class name.
-	virtual std::string getName();
+	virtual std::string getName() const;
 	//! Sets this Node's name to a user-specified string.
 	void				setName( const std::string &name )	{ mName = name; }
 
@@ -174,17 +179,18 @@ class Node : public std::enable_shared_from_this<Node>, private Noncopyable {
 
   protected:
 
-	//! Called before audio buffers need to be used. There is always a valid Context at this point.
+	//! Called before audio buffers need to be used. There is always a valid Context at this point. Default implementation is empty.
 	virtual void initialize()				{}
-	//! Called once the contents of initialize are no longer relevant, i.e. connections have changed. \note Not guaranteed to be called at Node destruction.
+	//! Called once the contents of initialize are no longer relevant, i.e. connections have changed. Default implementation is empty.
+	//! \note Not guaranteed to be called at Node destruction.
 	virtual void uninitialize()				{}
-	//! Callled when this Node should enable processing. Initiated from Node::enable().
+	//! Callled when this Node should enable processing. Initiated from Node::enable(). Default implementation is empty.
 	virtual void enableProcessing()			{}
-	//! Callled when this Node should disable processing. Initiated from Node::disable().
+	//! Callled when this Node should disable processing. Initiated from Node::disable(). Default implementation is empty.
 	virtual void disableProcessing()		{}
-	//! Override to perform audio processing on \t buffer.
-	virtual void process( Buffer *buffer )	{}
-
+	//! Override to perform audio processing on \t buffer. Default implementation is empty.
+	virtual void process( Buffer *buffer );
+	//! Override to customize how input Nodes are summed into the internal summing buffer. You usually don't need to do this.
 	virtual void sumInputs();
 
 	//! Default implementation returns true if numChannels matches our format.
@@ -227,6 +233,7 @@ class Node : public std::enable_shared_from_this<Node>, private Noncopyable {
 
 	std::weak_ptr<Context>	mContext;
 	std::atomic<bool>		mEnabled;
+	std::atomic<bool>		mEventScheduled;
 	bool					mInitialized;
 	bool					mAutoEnabled;
 	bool					mProcessInPlace;
@@ -254,7 +261,7 @@ inline const NodeRef& operator>>( const NodeRef &input, const NodeRef &output )
 }
 
 //! a Node that can be pulled without being connected to any outputs.
-class NodeAutoPullable : public Node {
+class CI_API NodeAutoPullable : public Node {
   public:
 	virtual ~NodeAutoPullable();
 
@@ -274,7 +281,7 @@ class NodeAutoPullable : public Node {
 };
 
 //! RAII-style utility class to set a \a Node's enabled state and have it restored at the end of the current scope block.
-struct ScopedEnableNode {
+struct CI_API ScopedEnableNode {
 	//! Constructs an object that will store \a node's enabled state and restore it at the end of the current scope.
 	ScopedEnableNode( const NodeRef &node );
 	//! Constructs an object that will set \a node's enabled state to \a enable and restore it to the original state at the end of the current scope.
@@ -285,7 +292,7 @@ struct ScopedEnableNode {
 	bool		mWasEnabled;
 };
 
-class NodeCycleExc : public AudioExc {
+class CI_API NodeCycleExc : public AudioExc {
   public:
 	NodeCycleExc( const NodeRef &sourceNode, const NodeRef &destNode );
 };

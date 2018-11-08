@@ -26,6 +26,7 @@
 #include "cinder/audio/Node.h"
 #include "cinder/audio/InputNode.h"
 #include "cinder/audio/OutputNode.h"
+#include "cinder/Timer.h"
 
 #include <list>
 #include <mutex>
@@ -43,7 +44,7 @@ class DeviceManager;
 //! which is the only hardware-facing Context.
 //!
 //! All Node's are created using the Context, which is necessary for thread synchronization.
-class Context : public std::enable_shared_from_this<Context> {
+class CI_API Context : public std::enable_shared_from_this<Context> {
   public:
 	virtual ~Context();
 
@@ -80,8 +81,8 @@ class Context : public std::enable_shared_from_this<Context> {
 	//! Returns whether or not this \a Context is current enabled and processing audio.
 	bool isEnabled() const		{ return mEnabled; }
 
-	//! Called by \a node when it's connections have changed, default implementation is empty.
-	virtual void connectionsDidChange( const NodeRef &node ) {} 
+	//! Called by \a node when it's connections have changed. Default implementation is empty.
+	virtual void connectionsDidChange( const NodeRef &node );
 
 	//! Returns the samplerate of this Context, which is governed by the current OutputNode.
 	size_t		getSampleRate()				{ return getOutput()->getOutputSampleRate(); }
@@ -111,8 +112,14 @@ class Context : public std::enable_shared_from_this<Context> {
 	//! \note Callers on the non-audio thread must synchronize with getMutex().
 	void removeAutoPulledNode( const NodeRef &node );
 
-	//! Schedule \a node to be enabled or disabled with with \a func on the audio thread, to be called at \a when seconds measured against getNumProcessedSeconds(). \a node is owned until the scheduled event completes.
-	void schedule( double when, const NodeRef &node, bool enable, const std::function<void ()> &func );
+	//! Schedule \a node to be enabled or disabled with with \a func on the audio thread, to be called at \a when seconds measured against getNumProcessedSeconds().
+	//! If \a \a callFuncBeforeProcess is true, then `func` will be called at the beginning of the processing block, if false will be called at the end.
+	//! \note Should be called from the user thread. Currently only one event can be scheduled on a node at a time. \a node is owned until the scheduled event completes.
+	void scheduleEvent( double when, const NodeRef &node, bool callFuncBeforeProcess, const std::function<void ()> &func );
+	//! Immediately cancels any events scheduled with scheduleEvent().
+	void cancelScheduledEvents( const NodeRef &node );
+	//! \deprecated  use scheduleEvent() instead.
+	void schedule( double when, const NodeRef &node, bool callFuncBeforeProcess, const std::function<void ()> &func )	{ scheduleEvent( when, node, callFuncBeforeProcess, func ); }
 
 	//! Returns the mutex used to synchronize the audio thread. This is also used internally by the Node class when making connections.
 	std::mutex& getMutex() const			{ return mMutex; }
@@ -123,6 +130,8 @@ class Context : public std::enable_shared_from_this<Context> {
 	void preProcess();
 	//! OutputNode implementations should call this after each rendering block.
 	void postProcess();
+	//! Returns the time in seconds spent during the last process loop.
+	double getTimeDuringLastProcessLoop() const	{ return mTimeDuringLastProcessLoop; }
 
 	//! Returns a string representation of the Node graph for debugging purposes.
 	std::string printGraphToString();
@@ -132,14 +141,14 @@ class Context : public std::enable_shared_from_this<Context> {
 
   private:
 	struct ScheduledEvent {
-		ScheduledEvent( uint64_t eventFrameThreshold, const NodeRef &node, bool enable, const std::function<void ()> &fn )
-			: mEventFrameThreshold( eventFrameThreshold ), mNode( node ), mEnable( enable ), mFunc( fn ), mFinished( false )
+		ScheduledEvent( uint64_t eventFrameThreshold, const NodeRef &node, bool callFuncBeforeProcess, const std::function<void ()> &fn )
+			: mEventFrameThreshold( eventFrameThreshold ), mNode( node ), mCallFuncBeforeProcess( callFuncBeforeProcess ), mFunc( fn ), mProcessingEvent( false )
 		{}
 
 		uint64_t				mEventFrameThreshold;
 		NodeRef					mNode;
-		bool					mEnable;
-		bool					mFinished;
+		bool					mCallFuncBeforeProcess;
+		bool					mProcessingEvent;
 		std::function<void ()>	mFunc;
 	};
 
@@ -158,8 +167,10 @@ class Context : public std::enable_shared_from_this<Context> {
 	std::atomic<uint64_t>		mNumProcessedFrames;
 	OutputNodeRef				mOutput;
 	std::list<ScheduledEvent>	mScheduledEvents;
+	ci::Timer					mProcessTimer;
+	std::atomic<double>			mTimeDuringLastProcessLoop;
 
-	// other nodes that don't have any outputs and need to be explictly pulled
+	// other nodes that don't have any outputs and need to be explicitly pulled
 	std::set<NodeRef>		mAutoPulledNodes;
 	std::vector<Node *>		mAutoPullCache;
 	bool					mAutoPullRequired, mAutoPullCacheDirty;
@@ -198,7 +209,7 @@ inline Context* master()	{ return Context::master(); }
 
 
 //! RAII-style utility class to set a \a Context's enabled state and have it restored at the end of the current scope block.
-struct ScopedEnableContext {
+struct CI_API  ScopedEnableContext {
 	//! Constructs an object that will store \a context's enabled state and restore it at the end of the current scope.
 	ScopedEnableContext( Context *context );
 	//! Constructs an object that will set \a context's enabled state to \a enable and restore it to the original state at the end of the current scope.

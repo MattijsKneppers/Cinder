@@ -63,49 +63,47 @@ class ExcChildNotFound;
 typedef std::function<bool(const Node&, svg::Style *)> RenderVisitor;
 
 //! Base class from which Renderers are derived.
-class Renderer {
+class CI_API Renderer {
   public:
-	Renderer() {}
-	
-	virtual ~Renderer() {}
+	virtual ~Renderer() = default;
 
 	void	setVisitor( const std::function<bool(const Node&, svg::Style *)> &visitor );
-	
-	virtual	void	pushGroup( const Group &group, float opacity ) {}	
-	virtual void	popGroup() {}	
-	virtual void	drawPath( const svg::Path &path ) {}
-	virtual void	drawPolyline( const svg::Polyline &polyline ) {}
-	virtual void	drawPolygon( const svg::Polygon &polygon ) {}
-	virtual void	drawLine( const svg::Line &line ) {}
-	virtual void	drawRect( const svg::Rect &rect ) {}
-	virtual void	drawCircle( const svg::Circle &circle ) {}
-	virtual void	drawEllipse( const svg::Ellipse &ellipse ) {}
-	virtual void	drawImage( const svg::Image &image ) {}
-	virtual void	drawTextSpan( const svg::TextSpan &span ) {}
 
-	virtual void	pushMatrix( const mat3 &m ) {}
+	virtual	void	pushGroup( const Group & /*group*/, float /*opacity*/ ) {}
+	virtual void	popGroup() {}
+	virtual void	drawPath( const svg::Path & /*path*/ ) {}
+	virtual void	drawPolyline( const svg::Polyline & /*polyline*/ ) {}
+	virtual void	drawPolygon( const svg::Polygon & /*polygon*/ ) {}
+	virtual void	drawLine( const svg::Line & /*line*/ ) {}
+	virtual void	drawRect( const svg::Rect & /*rect*/ ) {}
+	virtual void	drawCircle( const svg::Circle & /*circle*/ ) {}
+	virtual void	drawEllipse( const svg::Ellipse & /*ellipse*/ ) {}
+	virtual void	drawImage( const svg::Image & /*image*/ ) {}
+	virtual void	drawTextSpan( const svg::TextSpan & /*span*/ ) {}
+
+	virtual void	pushMatrix( const mat3 & /*m*/ ) {}
 	virtual void	popMatrix() {}
-	virtual void	pushStyle( const svg::Style &style ) {}
-	virtual void	popStyle( const svg::Style &style ) {}	
-	virtual void	pushFill( const class Paint &paint ) {}
+	virtual void	pushStyle( const svg::Style & /*style*/ ) {}
+	virtual void	popStyle() {}
+	virtual void	pushFill( const class Paint & /*paint*/ ) {}
 	virtual void	popFill() {}
-	virtual void	pushStroke( const class Paint &paint ) {}
+	virtual void	pushStroke( const class Paint & /*paint*/ ) {}
 	virtual void	popStroke() {}
-	virtual void	pushFillOpacity( float opacity ) {}
+	virtual void	pushFillOpacity( float  /*opacity*/ ) {}
 	virtual void	popFillOpacity() {}
-	virtual void	pushStrokeOpacity( float opacity ) {}
+	virtual void	pushStrokeOpacity( float  /*opacity*/ ) {}
 	virtual void	popStrokeOpacity() {}
-	virtual void	pushStrokeWidth( float width ) {}
+	virtual void	pushStrokeWidth( float  /*width*/ ) {}
 	virtual void	popStrokeWidth() {}
-	virtual void	pushFillRule( FillRule rule ) {}
-	virtual void	popFillRule() {}	
-	virtual void	pushLineCap( LineCap lineCap ) {}
-	virtual void	popLineCap() {}	
-	virtual void	pushLineJoin( LineJoin lineJoin ) {}
+	virtual void	pushFillRule( FillRule  /*rule*/ ) {}
+	virtual void	popFillRule() {}
+	virtual void	pushLineCap( LineCap  /*lineCap*/ ) {}
+	virtual void	popLineCap() {}
+	virtual void	pushLineJoin(LineJoin  /*lineJoin*/ ) {}
 	virtual void	popLineJoin() {}
-	virtual void	pushTextPen( const vec2 &penPos ) {}
+	virtual void	pushTextPen(const vec2 &  /*penPos*/ ) {}
 	virtual void	popTextPen() {}
-	virtual void	pushTextRotation( float rotation ) {}
+	virtual void	pushTextRotation( float  /*rotation*/ ) {}
 	virtual void	popTextRotation() {}
 
 	bool		visit( const Node &node, svg::Style *style ) const {
@@ -114,16 +112,16 @@ class Renderer {
 		else
 			return true;
 	}
-	
+
   protected:
-  	// this is a shared_ptr to work around a bug in Clang 4.0
+	// this is a shared_ptr to work around a bug in Clang 4.0
 	std::shared_ptr<std::function<bool(const Node&, svg::Style *)> >		mVisitor;
-	
+
 	friend class svg::Node;
 };
 
 //! SVG Value/Unit pair
-class Value {
+class CI_API Value {
   public:
 	enum Unit { USER, PX, PERCENT, PT, PC, MM, CM, INCH, EM, EX };
 	
@@ -144,7 +142,7 @@ class Value {
 };
 
 //! SVG Paint specification for fill or stroke, including solids and gradients
-class Paint {
+class CI_API Paint {
   public:
 	enum { NONE, COLOR, LINEAR_GRADIENT, RADIAL_GRADIENT };
 	
@@ -180,7 +178,7 @@ class Paint {
 };
 
 //! SVG Style for a node. Corresponds to SVG Styling: http://www.w3.org/TR/SVG/styling.html
-class Style {
+class CI_API Style {
   public:
 	Style();
 	Style( const XmlTree &xml, const Node *parent );
@@ -194,13 +192,13 @@ class Style {
 	void				unspecifyFill() { mSpecifiesFill = false; }
 	const Paint&		getFill() const { return mFill; }
 	void				setFill( const Paint &fill ) { mSpecifiesFill = true; mFill = fill; }
-	static const Paint&	getFillDefault() { return sPaintBlack; }
+	static const Paint&	getFillDefault();
 
 	bool				specifiesStroke() const { return mSpecifiesStroke; }
 	void				unspecifyStroke() { mSpecifiesStroke = false; }
 	const Paint&		getStroke() const { return mStroke; }
 	void				setStroke( const Paint &stroke ) { mSpecifiesStroke = true; mStroke = stroke; }
-	static const Paint&	getStrokeDefault() { return sPaintNone; }
+	static const Paint&	getStrokeDefault();
 
 	bool			specifiesOpacity() const { return mSpecifiesOpacity; }
 	void			unspecifyOpacity() { mSpecifiesOpacity = false; }
@@ -304,15 +302,12 @@ class Style {
 	
 	// visibility
 	bool			mSpecifiesVisible, mVisible, mDisplayNone;
-	
-  private:
-  	static Paint	sPaintNone, sPaintBlack;
 };
 
 //! Base class for an element of an SVG Document
-class Node {
+class CI_API Node {
   public:
-	Node( const Node *parent ) : mParent( parent ),  mSpecifiesTransform( false ), mBoundingBoxCached( false ) {}
+	Node( Node *parent ) : mParent( parent ),  mSpecifiesTransform( false ), mBoundingBoxCached( false ) {}
 	virtual ~Node() {}
 	
 	//! Returns the svg::Doc this Node is an element of
@@ -331,7 +326,7 @@ class Node {
 	Style				calcInheritedStyle() const;
 
 	//! Returns whether the point \a pt is inside of the Node's shape.
-	virtual bool	containsPoint( const vec2 &pt ) const { return false; }
+	virtual bool	containsPoint( const vec2 & /*pt*/ ) const { return false; }
 	
 	//! Renders the node and its descendants.
 	void			render( Renderer &renderer ) const;
@@ -395,7 +390,7 @@ class Node {
 
 
   protected:
-	Node( const Node *parent, const XmlTree &xml );
+	Node( Node *parent, const XmlTree &xml );
 	// returns whether this type of node directly renders anything. Everything but groups.
 	virtual bool	isDrawable() const { return true; }
 
@@ -413,7 +408,7 @@ class Node {
 	void				parseStyle( const std::string &value );
     
   protected:
-	const Node		*mParent;
+	Node			*mParent;
 	std::string		mId;
 	Style			mStyle;
 	bool			mSpecifiesTransform;
@@ -429,11 +424,11 @@ class Node {
 };
 
 //! Base class for SVG Gradients. See SVG Gradients: http://www.w3.org/TR/SVG/pservers.html#Gradients
-class Gradient : public Node {
+class CI_API Gradient : public Node {
   public:
-  	Gradient( const Node *parent, const XmlTree &xml );
+  	Gradient( Node *parent, const XmlTree &xml );
 	
-	class Stop {
+	class CI_API Stop {
 	  public:
 	  	Stop( const Node *parent, const XmlTree &xml );
 		
@@ -447,7 +442,7 @@ class Gradient : public Node {
 	bool			specifiesTransform() const { return mSpecifiesTransform; }
 	
   protected:
-	virtual void	renderSelf( Renderer &renderer ) const {}
+	virtual void	renderSelf( Renderer & /*renderer*/ ) const {}
 
 	void 		parse( const Node *parent, const XmlTree &xml );
 	void		copyAttributesFrom( const Gradient &rhs );
@@ -461,9 +456,9 @@ class Gradient : public Node {
 };
 
 //! SVG Linear gradient
-class LinearGradient : public Gradient {
+class CI_API LinearGradient : public Gradient {
   public:
-	LinearGradient( const Node *parent, const XmlTree &xml );
+	LinearGradient( Node *parent, const XmlTree &xml );
 	
 	Paint		asPaint() const;
 	
@@ -474,9 +469,9 @@ class LinearGradient : public Gradient {
 };
 
 //! SVG Radial gradient
-class RadialGradient : public Gradient {
+class CI_API RadialGradient : public Gradient {
   public:
-	RadialGradient( const Node *parent, const XmlTree &xml );
+	RadialGradient( Node *parent, const XmlTree &xml );
 	
 	Paint		asPaint() const;
 	
@@ -488,13 +483,15 @@ class RadialGradient : public Gradient {
 };
 
 //! SVG Circle element: http://www.w3.org/TR/SVG/shapes.html#CircleElement
-class Circle : public Node {
+class CI_API Circle : public Node {
   public:
-	Circle( const Node *parent ) : Node( parent ) {}
-	Circle( const Node *parent, const XmlTree &xml );
+	Circle( Node *parent ) : Node( parent ) {}
+	Circle( Node *parent, const XmlTree &xml );
 	
 	vec2		getCenter() const { return mCenter; }
+	void		setCenter( const vec2 &center ) { mCenter = center; }
 	float		getRadius() const { return mRadius; }
+	void		setRadius( float radius ) { mRadius = radius; }
 
 	virtual bool	containsPoint( const vec2 &pt ) const { return distance2( pt, mCenter ) < mRadius * mRadius; }
 
@@ -509,14 +506,17 @@ class Circle : public Node {
 };
 
 //! SVG Ellipse element: http://www.w3.org/TR/SVG/shapes.html#EllipseElement
-class Ellipse : public Node {
+class CI_API Ellipse : public Node {
   public:
-	Ellipse( const Node *parent ) : Node( parent ) {}
-	Ellipse( const Node *parent, const XmlTree &xml );
+	Ellipse( Node *parent ) : Node( parent ) {}
+	Ellipse( Node *parent, const XmlTree &xml );
 	
 	vec2		getCenter() const { return mCenter; }
+	void		setCenter( const vec2 &center ) { mCenter = center; }
 	float		getRadiusX() const { return mRadiusX; }
+	void		setRadiusX( float radiusX ) { mRadiusX = radiusX; }
 	float		getRadiusY() const { return mRadiusY; }
+	void		setRadiusY( float radiusY ) { mRadiusY = radiusY; }
 
 	bool 			containsPoint( const vec2 &pt ) const;
 
@@ -531,30 +531,31 @@ class Ellipse : public Node {
 };
 
 //! SVG Path element: http://www.w3.org/TR/SVG/paths.html#PathElement
-class Path : public Node {
+class CI_API Path : public Node {
   public:
-	Path( const Node *parent ) : Node( parent ) {}
-	Path( const Node *parent, const XmlTree &xml );
+	Path( Node *parent ) : Node( parent ) {}
+	Path( Node *parent, const XmlTree &xml );
 	
 	const Shape2d&		getShape2d() const { return mPath; }
 	void				appendShape2d( Shape2d *appendTo ) const;
 
-	virtual bool	containsPoint( const vec2 &pt ) const { return mPath.contains( pt ); }
+	bool		containsPoint( const vec2 &pt ) const override { return mPath.contains( pt ); }
 
-	virtual Shape2d	getShape() const { return mPath; }
+	Shape2d		getShape() const override { return mPath; }
+	void		setShape( const Shape2d &shape ) { mPath = shape; }
 
   protected:
-	virtual void	renderSelf( Renderer &renderer ) const;
-	virtual Rectf	calcBoundingBox() const { return mPath.calcPreciseBoundingBox(); }
+	void	renderSelf( Renderer &renderer ) const override;
+	Rectf	calcBoundingBox() const override { return mPath.calcPreciseBoundingBox(); }
 		
 	Shape2d		mPath;
 };
 
 //! SVG Line element: http://www.w3.org/TR/SVG/shapes.html#LineElement
-class Line : public Node {
+class CI_API Line : public Node {
   public:
-	Line( const Node *parent ) : Node( parent ) {}
-	Line( const Node *parent, const XmlTree &xml );
+	Line( Node *parent ) : Node( parent ) {}
+	Line( Node *parent, const XmlTree &xml );
 	
 	const vec2&	getPoint1() const { return mPoint1; }
 	const vec2&	getPoint2() const { return mPoint2; }
@@ -563,18 +564,21 @@ class Line : public Node {
 	
   protected:
 	virtual void	renderSelf( Renderer &renderer ) const;  
-	virtual Rectf	calcBoundingBox() const { return Rectf( mPoint1, mPoint2 ); }	
+	virtual Rectf	calcBoundingBox() const { return Rectf( std::min( mPoint1.x, mPoint2.x ), std::min( mPoint1.y, mPoint2.y ), std::max( mPoint1.x, mPoint2.x ), std::max( mPoint1.y, mPoint2.y ) ); }	
 	
 	vec2		mPoint1, mPoint2;
 };
 
 //! SVG Rect element: http://www.w3.org/TR/SVG/shapes.html#RectElement
-class Rect : public Node {
+class CI_API Rect : public Node {
   public:
-	Rect( const Node *parent ) : Node( parent ) {}
-	Rect( const Node *parent, const XmlTree &xml );
+	Rect( Node *parent ) : Node( parent ) {}
+	Rect( Node *parent, const XmlTree &xml );
 	
 	const Rectf&	getRect() const { return mRect; }
+	void			setRect( const Rectf &rect ) { mRect = rect; }
+	void			setWidth( float width ) { mRect = Rectf( mRect.x1, mRect.y1, mRect.x1 + width, mRect.y2 ); }
+	void			setHeight( float height ) { mRect = Rectf( mRect.x1, mRect.y1, mRect.x2, mRect.y1 + height ); }
 
 	virtual bool	containsPoint( const vec2 &pt ) const { return mRect.contains( pt ); }	
 
@@ -588,10 +592,10 @@ class Rect : public Node {
 };
 
 //! SVG Polygon Element: http://www.w3.org/TR/SVG/shapes.html#PolygonElement
-class Polygon : public Node {
+class CI_API Polygon : public Node {
   public:
-	Polygon( const Node *parent ) : Node( parent ) {}
-	Polygon( const Node *parent, const XmlTree &xml );
+	Polygon( Node *parent ) : Node( parent ) {}
+	Polygon( Node *parent, const XmlTree &xml );
 
 	const PolyLine2f&	getPolyLine() const { return mPolyLine; }
 	PolyLine2f&			getPolyLine() { return mPolyLine; }
@@ -608,10 +612,10 @@ class Polygon : public Node {
 };
 
 //! SVG Polyline Element: http://www.w3.org/TR/SVG/shapes.html#PolylineElement
-class Polyline : public Node {
+class CI_API Polyline : public Node {
   public:
-	Polyline( const Node *parent ) : Node( parent ) {}
-	Polyline( const Node *parent, const XmlTree &xml );
+	Polyline( Node *parent ) : Node( parent ) {}
+	Polyline( Node *parent, const XmlTree &xml );
 
 	const PolyLine2f&	getPolyLine() const { return mPolyLine; }
 	PolyLine2f&			getPolyLine() { return mPolyLine; }
@@ -628,9 +632,9 @@ class Polyline : public Node {
 };
 
 //! SVG Use Element, which instantiates a different element: http://www.w3.org/TR/SVG/struct.html#UseElement
-class Use : public Node {
+class CI_API Use : public Node {
   public:
-	Use( const Node *parent, const XmlTree &xml );
+	Use( Node *parent, const XmlTree &xml );
 	
 	virtual bool	isDrawable() const { return false; }
 	
@@ -646,9 +650,9 @@ class Use : public Node {
 };
 
 //! SVG Image Element. Represents an unpremultiplied bitmap. http://www.w3.org/TR/SVG/struct.html#ImageElement
-class Image : public Node {
+class CI_API Image : public Node {
   public:
-	Image( const Node *parent, const XmlTree &xml );
+	Image( Node *parent, const XmlTree &xml );
 
 	const Rectf&						getRect() const { return mRect; }
 	const std::shared_ptr<Surface8u>	getSurface() const { return mImage; }
@@ -669,9 +673,9 @@ class Image : public Node {
 typedef std::shared_ptr<TextSpan>	TextSpanRef;
 
 //! SVG tspan Element. Generally owned by a svg::Text Node. http://www.w3.org/TR/SVG/text.html#TSpanElement
-class TextSpan : public Node {
+class CI_API TextSpan : public Node {
   public:
-	class Attributes {
+	class CI_API Attributes {
 	  public:
 		Attributes() {}
 		Attributes( const XmlTree &xml );
@@ -679,23 +683,32 @@ class TextSpan : public Node {
 		void 	startRender( Renderer &renderer ) const;
 		void 	finishRender( Renderer &renderer ) const;
 
+		void	setTextPen( const vec2 &textPen );
+
 		std::vector<Value>	mX, mY;
 		float				mDx, mDy;
 		std::vector<Value>	mRotate;
 		float				mTextLength;
 		float				mLengthAdjust;
+		std::vector<Value>	mLetterSpacing;
 	};
 
-	TextSpan( const Node *parent, const XmlTree &xml );
-	TextSpan( const Node *parent, const std::string &spanString );
+	TextSpan( Node *parent, const XmlTree &xml );
+	TextSpan( Node *parent, const std::string &spanString );
 	
-	const std::string&							getString() const { return mString; }
-	const std::shared_ptr<Font>					getFont() const;
+	const std::string&						getString() const { return mString; }
+	void									setString( const std::string &s ) { mString = s; }
+	const std::shared_ptr<Font>				getFont() const;
 	//! Returns a vector of glyph IDs and positions for the string, ignoring rotation. Cached and lazily calculated.
-	std::vector<std::pair<uint16_t,vec2> > 	getGlyphMeasures() const;
-	vec2										getTextPen() const;
-	float						getRotation() const;
-	
+	std::vector<std::pair<uint16_t,vec2>> 	getGlyphMeasures() const;
+	vec2									getTextPen() const;
+	void									setTextPen( const vec2 &textPen );
+	float									getRotation() const;
+	Value									getLetterSpacing() const;
+
+	std::vector<TextSpanRef>&				getSpans() { return mSpans; }
+	const std::vector<TextSpanRef>&			getSpans() const { return mSpans; }
+
   protected:
 	virtual void	renderSelf( Renderer &renderer ) const;
 
@@ -712,12 +725,17 @@ class TextSpan : public Node {
 };
 
 //! SVG Text element. http://www.w3.org/TR/SVG/text.html#TextElement
-class Text : public Node {
+class CI_API Text : public Node {
   public:
-  	Text( const Node *parent, const XmlTree &xml );
+  	Text( Node *parent, const XmlTree &xml );
 
 	vec2 	getTextPen() const;
+	void	setTextPen( const vec2 &textPen ) { mAttributes.setTextPen( textPen ); }  
 	float	getRotation() const;
+	Value	getLetterSpacing() const;
+	
+	std::vector<TextSpanRef>&		getSpans() { return mSpans; }
+	const std::vector<TextSpanRef>&	getSpans() const { return mSpans; }
 	
   protected:
 	virtual void	renderSelf( Renderer &renderer ) const;
@@ -728,17 +746,22 @@ class Text : public Node {
 };
 
 //! Represents a group of SVG elements. http://www.w3.org/TR/SVG/struct.html#Groups
-class Group : public Node, private Noncopyable {
+class CI_API Group : public Node, private Noncopyable {
   public:
-	Group( const Node *parent ) : Node( parent ) {}
-	Group( const Node *parent, const XmlTree &xml );
+	Group( Node *parent ) : Node( parent ) {}
+	Group( Node *parent, const XmlTree &xml );
 	~Group();
 
 	//! Recursively searches for a child element of type <tt>svg::T</tt> named \a id. Returns NULL on failure to find the object or if it is not of type T.
     template<typename T>
-	const T*				find( const std::string &id ) { return dynamic_cast<const T*>( findNode( id ) ); }
+	const T*				find( const std::string &id ) const { return dynamic_cast<const T*>( findNode( id ) ); }
+	//! Recursively searches for a child element of type <tt>svg::T</tt> named \a id. Returns NULL on failure to find the object or if it is not of type T.
+    template<typename T>
+	T*						find( const std::string &id ) { return dynamic_cast<T*>( findNode( id ) ); }
 	//! Recursively searches for a child element named \a id. Returns NULL on failure.
 	const Node*				findNode( const std::string &id, bool recurse = true ) const;
+	//! Recursively searches for a child element named \a id. Returns NULL on failure.
+	Node*					findNode( const std::string &id, bool recurse = true ) { return const_cast<Node*>( const_cast<const Group*>( this )->findNode( id, recurse ) ); }
 	//! Recursively searches for a child element of type <tt>svg::T</tt> whose name contains \a idPartial. Returns NULL on failure to find the object or if it is not of type T.
     template<typename T>
 	const T*				findByIdContains( const std::string &idPartial ) const { return dynamic_cast<const T*>( findNodeByIdContains( idPartial ) ); }
@@ -747,6 +770,8 @@ class Group : public Node, private Noncopyable {
 	virtual const Node*		findInAncestors( const std::string &elementId ) const;
 	//! Returns a reference to the child named \a id. Throws svg::ExcChildNotFound if not found.
 	const Node&				getChild( const std::string &id ) const;
+	//! Returns a reference to the child named \a id. Throws svg::ExcChildNotFound if not found.
+	Node&					getChild( const std::string &id ) { return const_cast<Node&>( const_cast<const Group*>( this )->getChild( id ) ); }
 	//! Returns a reference to the child named \a id. Throws svg::ExcChildNotFound if not found.
 	const Node&				operator/( const std::string &id ) const { return getChild( id ); }
 	
@@ -760,6 +785,13 @@ class Group : public Node, private Noncopyable {
 	const std::list<Node*>&	getChildren() const { return mChildren; }
 	//! Returns a reference to the list of the Group's children.
 	std::list<Node*>&		getChildren() { return mChildren; }
+	//! Returns a reference to the child at \a index. Throws svg::ExcChildNotFound if \a index is out of range.
+	const Node&				getChild( size_t index ) const;
+	//! Returns a reference to the child at \a index. Throws svg::ExcChildNotFound if \a index is out of range.
+	Node&					getChild( size_t index ) { return const_cast<Node&>( const_cast<const Group*>( this )->getChild( index ) ); }
+
+	//! Recursively iterates all Nodes in Group or Doc, passing each to \a fn to be optionally manipulated
+	virtual void		iterate( const std::function<void(Node*)> &fn );
 
   protected:
 	Node*		nodeUnderPoint( const vec2 &absolutePoint, const mat3 &parentInverseMatrix ) const;
@@ -778,7 +810,7 @@ class Group : public Node, private Noncopyable {
 
 typedef std::shared_ptr<Doc>	DocRef;
 //! Represents an SVG Document. See SVG Document Structure http://www.w3.org/TR/SVG/struct.html
-class Doc : public Group {
+class CI_API Doc : public Group {
   public:
 	Doc() : Group( 0 ), mWidth( 0 ), mHeight( 0 ) {}
 	Doc( const fs::path &filePath );
@@ -825,22 +857,22 @@ class Doc : public Group {
 };
 
 //! SVG Exception base-class
-class Exc : public Exception
+class CI_API Exc : public Exception
 {};
 
-class ValueExc : public Exc
+class CI_API ValueExc : public Exc
 {};
 
-class FloatParseExc : public Exc
+class CI_API FloatParseExc : public Exc
 {};
 
-class PathParseExc : public Exc
+class CI_API PathParseExc : public Exc
 {};
 
-class TransformParseExc : public Exc
+class CI_API TransformParseExc : public Exc
 {};
 
-class ExcChildNotFound : public Exc {
+class CI_API ExcChildNotFound : public Exc {
   public:
 	ExcChildNotFound( const std::string &child );
 };

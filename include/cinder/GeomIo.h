@@ -66,19 +66,19 @@ enum DataType { FLOAT, INTEGER, DOUBLE };
 
 
 //! Debug utility which returns the name of \a attrib as a std::string
-std::string attribToString( Attrib attrib );
+CI_API std::string attribToString( Attrib attrib );
 //! Debug utility which returns the name of \a primitive as a std::string
-std::string primitiveToString( Primitive primitive );
+CI_API std::string primitiveToString( Primitive primitive );
 //! Utility function for copying attribute data. Does the right thing to convert \a srcDimensions to \a dstDimensions. \a dstStrideBytes of \c 0 implies tightly packed data.
-void copyData( uint8_t srcDimensions, const float *srcData, size_t numElements, uint8_t dstDimensions, size_t dstStrideBytes, float *dstData );
+CI_API void copyData( uint8_t srcDimensions, const float *srcData, size_t numElements, uint8_t dstDimensions, size_t dstStrideBytes, float *dstData );
 //! Utility function for copying attribute data. Does the right thing to convert \a srcDimensions to \a dstDimensions. Stride of \c 0 implies tightly packed data.
-void copyData( uint8_t srcDimensions, size_t srcStrideBytes, const float *srcData, size_t numElements, uint8_t dstDimensions, size_t dstStrideBytes, float *dstData );
+CI_API void copyData( uint8_t srcDimensions, size_t srcStrideBytes, const float *srcData, size_t numElements, uint8_t dstDimensions, size_t dstStrideBytes, float *dstData );
 //! Utility function for calculating tangents and bitangents from indexed geometry. \a resultBitangents may be NULL if not needed.
-void calculateTangents( size_t numIndices, const uint32_t *indices, size_t numVertices, const vec3 *positions, const vec3 *normals, const vec2 *texCoords, std::vector<vec3> *resultTangents, std::vector<vec3> *resultBitangents );
+CI_API void calculateTangents( size_t numIndices, const uint32_t *indices, size_t numVertices, const vec3 *positions, const vec3 *normals, const vec2 *texCoords, std::vector<vec3> *resultTangents, std::vector<vec3> *resultBitangents );
 //! Utility function for calculating tangents and bitangents from indexed geometry and 3D texture coordinates. \a resultBitangents may be NULL if not needed.
-void calculateTangents( size_t numIndices, const uint32_t *indices, size_t numVertices, const vec3 *positions, const vec3 *normals, const vec3 *texCoords, std::vector<vec3> *resultTangents, std::vector<vec3> *resultBitangents );
+CI_API void calculateTangents( size_t numIndices, const uint32_t *indices, size_t numVertices, const vec3 *positions, const vec3 *normals, const vec3 *texCoords, std::vector<vec3> *resultTangents, std::vector<vec3> *resultBitangents );
 
-struct AttribInfo {
+struct CI_API AttribInfo {
 	AttribInfo( const Attrib &attrib, uint8_t dims, size_t stride, size_t offset, uint32_t instanceDivisor = 0 )
 		: mAttrib( attrib ), mDims( dims ), mDataType( DataType::FLOAT ), mStride( stride ), mOffset( offset ), mInstanceDivisor( instanceDivisor )
 	{}
@@ -100,16 +100,15 @@ struct AttribInfo {
 	uint8_t		getByteSize() const { if( mDataType == geom::DataType::DOUBLE ) return mDims * 8; else return mDims * 4; }
 
   protected:
-	Attrib		mAttrib;
-	DataType	mDataType;
-	int32_t		mDims;
 	size_t		mStride;
 	size_t		mOffset;
 	uint32_t	mInstanceDivisor;
-}; 
+	Attrib		mAttrib;
+	DataType	mDataType;
+	int8_t		mDims;
+};
 
-
-class BufferLayout {
+class CI_API BufferLayout {
   public:
 	BufferLayout() {}
 	BufferLayout( const std::vector<AttribInfo> &attribs )
@@ -137,7 +136,7 @@ class BufferLayout {
 	std::vector<AttribInfo>		mAttribs;
 };
 
-class Source {
+class CI_API Source {
   public:
 	virtual ~Source() {}
 	virtual size_t		getNumVertices() const = 0;
@@ -158,7 +157,7 @@ class Source {
 	void forceCopyIndicesTrianglesImpl( T *dest ) const;
 };
 
-class Target {
+class CI_API Target {
   public:
 	virtual uint8_t		getAttribDims( Attrib attr ) const = 0;	
 
@@ -183,10 +182,10 @@ class Target {
 	void copyIndexData( const uint32_t *source, size_t numIndices, uint16_t *target );
 };
 
-class Modifier {
+class CI_API Modifier {
   public:
 	//! Expresses the upstream parameters for a Modifier such as # vertices
-	class Params {
+	class CI_API Params {
 	  public:
 		size_t		getNumVertices() const { return mNumVertices; }
 		size_t		getNumIndices() const { return mNumIndices; }
@@ -213,7 +212,7 @@ class Modifier {
 	virtual void		process( SourceModsContext *ctx, const AttribSet &requestedAttribs ) const = 0;
 };
 
-class Rect : public Source {
+class CI_API Rect : public Source {
   public:
 	//! Equivalent to Rectf( -0.5, -0.5, 0.5, 0.5 )
 	Rect();
@@ -241,10 +240,9 @@ class Rect : public Source {
 	std::array<vec2,4>		mPositions, mTexCoords;
 	std::array<ColorAf,4>	mColors;
 	bool					mHasColors;
-	static const float		sNormals[4*3], sTangents[4*3];
 };
 	
-class RoundedRect : public Source {
+class CI_API RoundedRect : public Source {
   public:
 	RoundedRect();
 	RoundedRect( const Rectf &r, float cornerRadius = 1.0f );
@@ -276,7 +274,7 @@ class RoundedRect : public Source {
 	float						mCornerRadius;
 };
 
-class Cube : public Source {
+class CI_API Cube : public Source {
   public:
 	Cube();
 
@@ -307,7 +305,7 @@ class Cube : public Source {
 	std::array<ColorAf, 6>	mColors;
 };
 
-class Icosahedron : public Source {
+class CI_API Icosahedron : public Source {
   public:
 	Icosahedron();
 
@@ -334,7 +332,7 @@ class Icosahedron : public Source {
 	friend class WireIcosahedron;
 };
 
-class Icosphere : public Source {
+class CI_API Icosphere : public Source {
   public:
 	Icosphere();
 
@@ -364,7 +362,7 @@ class Icosphere : public Source {
 	mutable std::vector<uint32_t>	mIndices;
 };
 
-class Teapot : public Source {
+class CI_API Teapot : public Source {
   public:
 	Teapot();
 
@@ -399,7 +397,7 @@ class Teapot : public Source {
 	static const float		sCurveData[][3];
 };
 
-class Circle : public Source {
+class CI_API Circle : public Source {
   public:
 	Circle();
 
@@ -424,7 +422,7 @@ class Circle : public Source {
 	size_t		mNumVertices;
 };
 
-class Ring : public Source {
+class CI_API Ring : public Source {
   public:
 	Ring();
 
@@ -451,7 +449,7 @@ private:
 	size_t		mNumVertices;
 };
 
-class Sphere : public Source {
+class CI_API Sphere : public Source {
   public:
 	Sphere();
 	Sphere( const ci::Sphere &sphere );
@@ -479,7 +477,7 @@ class Sphere : public Source {
 	bool		mHasColors;
 };
 
-class Capsule : public Source {
+class CI_API Capsule : public Source {
   public:
 	Capsule();
 
@@ -516,7 +514,7 @@ class Capsule : public Source {
 	bool		mHasColors;
 };
 
-class Torus : public Source {
+class CI_API Torus : public Source {
   public:
 	Torus();
 
@@ -559,7 +557,7 @@ class Torus : public Source {
 	int			mNumRings, mNumAxis;
 };
 
-class TorusKnot : public Source {
+class CI_API TorusKnot : public Source {
 public:
 	TorusKnot();
 
@@ -611,7 +609,7 @@ protected:
 	bool		mHasColors;
 };
 
-class Helix : public Torus {
+class CI_API Helix : public Torus {
   public:
 	Helix()
 	{
@@ -637,7 +635,7 @@ class Helix : public Torus {
 	Helix&			radius( float major, float minor ) { Torus::radius( major, minor ); return *this; }
 };
 
-class Cylinder : public Source {
+class CI_API Cylinder : public Source {
   public:
 	Cylinder();
 
@@ -687,7 +685,7 @@ class Cylinder : public Source {
 	int			mNumSegments, mNumSlices;
 };
 
-class Cone : public Cylinder {
+class CI_API Cone : public Cylinder {
   public:
 	Cone() { radius( 1.0f, 0.0f ); subdivisionsHeight( 6 ); }
 
@@ -716,7 +714,7 @@ class Cone : public Cylinder {
 };
 
 //! Defaults to a plane on the z axis, origin = [0, 0, 0], normal = [0, 1, 0]
-class Plane : public Source {
+class CI_API Plane : public Source {
   public:
 	Plane();
 
@@ -743,7 +741,7 @@ class Plane : public Source {
 	vec3		mOrigin, mAxisU, mAxisV;
 };
 
-class Extrude : public Source {
+class CI_API Extrude : public Source {
   public:
 	Extrude( const Shape2d &shape, float distance, float approximationScale = 1.0f );
 	
@@ -781,7 +779,7 @@ class Extrude : public Source {
 	std::vector<std::vector<vec2>>	mPathSubdivisionPositions, mPathSubdivisionTangents;
 };
 
-class ExtrudeSpline : public Source {
+class CI_API ExtrudeSpline : public Source {
   public:
 	ExtrudeSpline( const Shape2d &shape, const ci::BSpline<3,float> &spline, int splineSubdivisions = 10, float approximationScale = 1.0f );
 	
@@ -823,7 +821,7 @@ class ExtrudeSpline : public Source {
 };
 
 //! Converts a BSpline into a \c LINE_STRIP
-class BSpline : public Source {
+class CI_API BSpline : public Source {
   public:
 	template<int D, typename T>
 	BSpline( const ci::BSpline<D,T> &spline, int subdivisions );
@@ -844,7 +842,7 @@ class BSpline : public Source {
 	template<typename T>
 	void init( const ci::BSpline<4,T> &spline, int subdivisions );
 
-	int						mPositionDims;
+	uint8_t					mPositionDims;
 	size_t					mNumVertices;
 	std::vector<float>		mPositions;
 	std::vector<vec3>		mNormals;
@@ -852,7 +850,7 @@ class BSpline : public Source {
 
 //////////////////////////////////////////////////////////////////////////////////////
 // Wireframe primitives
-class WireSource : public Source {
+class CI_API WireSource : public Source {
   public:
 	size_t			getNumIndices() const override { return 0; }
 	Primitive		getPrimitive() const override { return geom::LINES; }
@@ -865,7 +863,7 @@ class WireSource : public Source {
 };
 
 
-class WireCapsule : public WireSource {
+class CI_API WireCapsule : public WireSource {
   public:
 	WireCapsule();
 
@@ -895,7 +893,7 @@ class WireCapsule : public WireSource {
 	int			mSubdivisionsHeight, mSubdivisionsAxis, mNumSegments;
 };
 
-class WireCircle : public Source {
+class CI_API WireCircle : public Source {
   public:
 	WireCircle();
 
@@ -924,7 +922,7 @@ class WireCircle : public Source {
 	size_t		mNumVertices;
 };
 	
-class WireRoundedRect : public WireSource {
+class CI_API WireRoundedRect : public WireSource {
   public:
 	WireRoundedRect();
 	WireRoundedRect( const Rectf &r, float cornerRadius = 1.0f );
@@ -945,7 +943,7 @@ class WireRoundedRect : public WireSource {
 	float						mCornerRadius;
 };
 
-class WireRect : public WireSource {
+class CI_API WireRect : public WireSource {
   public:
   	WireRect();
   	WireRect( const Rectf &r );
@@ -961,7 +959,7 @@ class WireRect : public WireSource {
   	std::array<vec2, 5> mPositions;
 };
 
-class WireCube : public WireSource {
+class CI_API WireCube : public WireSource {
   public:
 	WireCube() : WireCube( vec3( 1 ) ) {}
 	WireCube( const vec3 &size, const ivec3 &subdivisions = ivec3( 1 ) )
@@ -987,7 +985,7 @@ class WireCube : public WireSource {
 };
 
 
-class WireCylinder : public WireSource {
+class CI_API WireCylinder : public WireSource {
   public:
 	WireCylinder()
 		: mOrigin( 0, 0, 0 ), mHeight( 2.0f ), mDirection( 0, 1, 0 ), mRadiusBase( 1.0f ), mRadiusApex( 1.0f ),
@@ -1028,7 +1026,7 @@ class WireCylinder : public WireSource {
 };
 
 
-class WireCone : public WireCylinder {
+class CI_API WireCone : public WireCylinder {
   public:
 	WireCone()
 	{ radius( 1.0f, 0.0f ); }
@@ -1059,7 +1057,7 @@ class WireCone : public WireCylinder {
 	WireCone*	clone() const override { return new WireCone( *this ); }
 };
 
-class WireIcosahedron : public WireSource {
+class CI_API WireIcosahedron : public WireSource {
 public:
 	WireIcosahedron() {}
 
@@ -1073,7 +1071,7 @@ protected:
 	static std::vector<vec3>	sPositions;
 };
 
-class WireFrustum : public WireSource {
+class CI_API WireFrustum : public WireSource {
   public:
 	WireFrustum( const CameraPersp &cam );
 
@@ -1089,7 +1087,7 @@ class WireFrustum : public WireSource {
 };
 
 //! Defaults to a plane on the z axis, origin = [0, 0, 0], normal = [0, 1, 0]
-class WirePlane : public WireSource {
+class CI_API WirePlane : public WireSource {
   public:
 	WirePlane()
 		: mSubdivisions( 1, 1 ), mSize( 2, 2 ), mOrigin( 0 ), mAxisU( 1, 0, 0 ), mAxisV( 0, 0, 1 ) {}
@@ -1116,7 +1114,7 @@ class WirePlane : public WireSource {
 };
 
 
-class WireSphere : public WireSource {
+class CI_API WireSphere : public WireSource {
   public:
 	WireSphere()
 		: mCenter(0), mRadius(1.0f), mSubdivisionsAxis(6), mSubdivisionsHeight(4), mNumSegments(72) {}
@@ -1141,7 +1139,7 @@ class WireSphere : public WireSource {
 };
 
 
-class WireTorus : public WireSource {
+class CI_API WireTorus : public WireSource {
   public:
 	WireTorus()
 		: mCenter( 0 ), mRadiusMajor( 1.0f ), mRadiusMinor( 0.75f ), mSubdivisionsAxis( 18 ), mSubdivisionsHeight( 18 ), mNumSegments( 72 ) {}
@@ -1175,7 +1173,7 @@ class WireTorus : public WireSource {
 //////////////////////////////////////////////////////////////////////////////////////
 // Modifiers
 //! "Bakes" a mat4 transformation into the positions, normals and tangents of a geom::Source. Promotes 2D positions to 3D.
-class Transform : public Modifier {
+class CI_API Transform : public Modifier {
   public:
 	//! Does not currently support a projection matrix (i.e. doesn't divide by 'w' )
 	Transform( const mat4 &transform )
@@ -1197,7 +1195,7 @@ class Transform : public Modifier {
 };
 
 //! "Bakes" a translation into the positions, normals and tangents of a geom::Source
-class Translate : public Transform {
+class CI_API Translate : public Transform {
   public:
 	Translate( const vec3 &v ) : Transform( glm::translate( v ) ) {}
 	Translate( float x, float y, float z ) : Transform( glm::translate( vec3( x, y, z ) ) ) {}
@@ -1206,7 +1204,7 @@ class Translate : public Transform {
 };
 
 //! "Bakes" a scale into the positions, normals and tangents of a geom::Source
-class Scale : public Transform {
+class CI_API Scale : public Transform {
   public:
 	Scale( const vec3 &v ) : Transform( glm::scale( v ) ) {}
 	Scale( float x, float y, float z ) : Transform( glm::scale( vec3( x, y, z ) ) ) {}
@@ -1214,7 +1212,7 @@ class Scale : public Transform {
 };
 
 //! "Bakes" a rotation into the positions, normals and tangents of a geom::Source
-class Rotate : public Transform {
+class CI_API Rotate : public Transform {
   public:
 	//! Transforms geometry by a rotation by quaternion \a quat. Promotes 2D positions to 3D.
 	Rotate( const glm::quat &quat ) : Transform( glm::toMat4( quat ) ) {}
@@ -1223,7 +1221,7 @@ class Rotate : public Transform {
 };
 
 //! Twists a geom::Source around a given axis
-class Twist : public Modifier {
+class CI_API Twist : public Modifier {
   public:
 	Twist()
 		: mAxisStart( 0, -1, 0 ), mAxisEnd( 0, 1, 0 ), mStartAngle( (float)-M_PI ), mEndAngle( (float)M_PI )
@@ -1244,7 +1242,7 @@ class Twist : public Modifier {
 };
 
 //! Converts any geom::Source to equivalent vertices connected by lines. Output primitive type is always geom::Primitive::LINES.
-class Lines : public Modifier {
+class CI_API Lines : public Modifier {
   public:
 	Modifier*	clone() const override { return new Lines(); }
 
@@ -1257,7 +1255,7 @@ class Lines : public Modifier {
 };
 
 //! Modifies the color of a geom::Source as a function of a 2D or 3D input attribute
-class ColorFromAttrib : public Modifier {
+class CI_API ColorFromAttrib : public Modifier {
   public:
 	ColorFromAttrib( Attrib attrib, const std::function<Colorf(vec2)> &fn )
 		: mAttrib( attrib ), mFnColor2( fn )
@@ -1286,7 +1284,7 @@ class ColorFromAttrib : public Modifier {
 };
 
 //! Sets an attribute of a geom::Source to be a constant value for every vertex. Determines dimension from constructor (vec4 -> 4, for example)
-class Constant : public Modifier {
+class CI_API Constant : public Modifier {
   public:
 	Constant( geom::Attrib attrib, float v )
 		: mAttrib( attrib ), mValue( v, 0, 0, 0 ), mDims( 1 ) {}
@@ -1300,13 +1298,13 @@ class Constant : public Modifier {
 	Modifier*	clone() const override { return new geom::Constant( *this ); }
 	uint8_t		getAttribDims( Attrib attr, uint8_t upstreamDims ) const override;
 	AttribSet	getAvailableAttribs( const Modifier::Params &upstreamParams ) const override;
-	
+
 	void		process( SourceModsContext *ctx, const AttribSet &requestedAttribs ) const override;
 
   protected:
 	geom::Attrib	mAttrib;
 	vec4			mValue;
-	int				mDims;
+	uint8_t			mDims;
 };
 
 //! Maps an attribute as a function of another attribute. Valid types are: float, vec2, vec3, vec4
@@ -1337,7 +1335,7 @@ class AttribFn : public Modifier {
 };
 
 //! Draws lines representing the Attrib::NORMALs for a geom::Source. Encodes 0 for base and 1 for normal into CUSTOM_0
-class VertexNormalLines : public Modifier {
+class CI_API VertexNormalLines : public Modifier {
   public:
 	VertexNormalLines( float length, Attrib attrib = Attrib::NORMAL );
 
@@ -1358,7 +1356,7 @@ class VertexNormalLines : public Modifier {
 };
 
 //! Creates TANGENT and BITANGENT attributes based on POSITIONS, NORMALS and TEX_COORD_0. Requires indexed geometry.
-class Tangents : public Modifier {
+class CI_API Tangents : public Modifier {
   public:
 	Tangents() {}
 
@@ -1370,7 +1368,7 @@ class Tangents : public Modifier {
 };
 
 //! Inverts the value of an attribute. Works for any dimension.
-class Invert : public Modifier {
+class CI_API Invert : public Modifier {
   public:
 	Invert( Attrib attrib )
 		: mAttrib( attrib )
@@ -1384,7 +1382,7 @@ class Invert : public Modifier {
 };
 
 //! Removes an attribute entirely
-class Remove : public Modifier {
+class CI_API Remove : public Modifier {
   public:
 	Remove( Attrib attrib )
 		: mAttrib( attrib )
@@ -1401,7 +1399,7 @@ class Remove : public Modifier {
 };
 
 //! Calculates the 3D bounding box of the geometry.
-class Bounds : public Modifier {
+class CI_API Bounds : public Modifier {
   public:
 	Bounds( AxisAlignedBox *result, Attrib attrib = POSITION )
 		: mResult( result ), mAttrib( attrib )
@@ -1418,7 +1416,7 @@ class Bounds : public Modifier {
 
 //! Calculates a single level of subdivision of triangles by inserting a single vertex in the center of each triangle.
 //! Interpolates all attributes and normalizes 3D NORMAL, TANGENT and BITANGENT attributes.
-class Subdivide : public Modifier {
+class CI_API Subdivide : public Modifier {
   public:
 	Subdivide()
 	{}
@@ -1434,7 +1432,7 @@ class Subdivide : public Modifier {
 ////////////////////////////////////////////////////////////////////////////////
 //! Base class for SourceMods<> and SourceModsPtr<>
 //! Used by Modifiers to process Source -> Target
-class SourceModsContext : public Target {
+class CI_API SourceModsContext : public Target {
   public:
 	SourceModsContext( const SourceMods *sourceMods );
 	//! Can be used to capture a Source. Calling loadInto() in this case is an error.
@@ -1489,7 +1487,7 @@ class SourceModsContext : public Target {
 };
 
 //! Represents a geom::Source with 0 or more geom::Modifiers concatenated.
-class SourceMods : public Source {
+class CI_API SourceMods : public Source {
   public:
 	SourceMods()
 		: mVariablesCached( false ), mSourcePtr( nullptr )
@@ -1615,29 +1613,29 @@ inline SourceMods operator&( const Source *source, const Modifier &modifier )
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class Exc : public Exception {
+class CI_API Exc : public Exception {
 };
 
-class ExcMissingAttrib : public Exception {
+class CI_API ExcMissingAttrib : public Exception {
 };
 
-class ExcIllegalSourceDimensions : public Exception {
+class CI_API ExcIllegalSourceDimensions : public Exception {
 };
 
-class ExcIllegalDestDimensions : public Exception {
+class CI_API ExcIllegalDestDimensions : public Exception {
 };
 
-class ExcIllegalPrimitiveType : public Exception {
+class CI_API ExcIllegalPrimitiveType : public Exception {
 };
 
-class ExcNoIndices : public Exception {
+class CI_API ExcNoIndices : public Exception {
 };
 
-class ExcIllegalIndexType : public Exception {
+class CI_API ExcIllegalIndexType : public Exception {
 };
 
 // Attempt to store >65535 indices into a uint16_t
-class ExcInadequateIndexStorage : public Exception {
+class CI_API ExcInadequateIndexStorage : public Exception {
 };
 
 } } // namespace cinder::geom

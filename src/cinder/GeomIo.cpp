@@ -322,46 +322,66 @@ void copyData( uint8_t srcDimensions, const float *srcData, size_t numElements, 
 
 namespace { 
 template<typename T>
+bool indicesInRange( const uint32_t *indices, size_t numIndices, T indexOffset )
+{
+    for( size_t i = 0; i < numIndices; ++i )
+        if( indices[i] + indexOffset > std::numeric_limits<T>::max() )
+            return false;
+
+    return true;
+}
+
+template<>
+bool indicesInRange<uint32_t>( const uint32_t *, size_t, uint32_t )
+{
+	return true;
+}
+
+template<typename T>
 void copyIndexDataForceTrianglesImpl( Primitive primitive, const uint32_t *source, size_t numIndices, T indexOffset, T *target )
 {
+	// verify that all indices are within the range expressible by 'T'
+	CI_ASSERT( indicesInRange<T>( source, numIndices, indexOffset ) );
+
 	switch( primitive ) {
 		case Primitive::LINES:
 		case Primitive::LINE_STRIP:
 		case Primitive::TRIANGLES:
-			if( indexOffset == 0 ) {
-				memcpy( target, source, sizeof(uint32_t) * numIndices );
-			}
+			if( indexOffset == 0 )
+				std::copy_n( source, numIndices, target );
 			else {
 				for( size_t i = 0; i < numIndices; ++i )
-					target[i] = source[i] + indexOffset;
+					target[i] = static_cast<T>( source[i] + indexOffset );
 			}
 		break;
 		case Primitive::TRIANGLE_STRIP: { // ABC, CBD, CDE, EDF, etc
+			CI_ASSERT( indexOffset == 0 ); // unsupported with TRIANGLE_STRIP
 			if( numIndices < 3 )
 				return;
 			size_t outIdx = 0; // (012, 213), (234, 435), etc : (odd,even), (odd,even), etc
 			for( size_t i = 0; i < numIndices - 2; ++i ) {
 				if( i & 1 ) { // odd
-					target[outIdx++] = source[i+1];
-					target[outIdx++] = source[i];
-					target[outIdx++] = source[i+2];
+					target[outIdx++] = static_cast<T>( source[i+1] );
+					target[outIdx++] = static_cast<T>( source[i] );
+					target[outIdx++] = static_cast<T>( source[i+2] );
 				}
 				else { // even
-					target[outIdx++] = source[i];
-					target[outIdx++] = source[i+1];
-					target[outIdx++] = source[i+2];
+					target[outIdx++] = static_cast<T>( source[i] );
+					target[outIdx++] = static_cast<T>( source[i+1] );
+					target[outIdx++] = static_cast<T>( source[i+2] );
 				}
 			}
 		}
 		break;
 		case Primitive::TRIANGLE_FAN: { // ABC, ACD, ADE, etc
+			CI_ASSERT( indexOffset == 0 ); // unsupported with TRIANGLE_FAN 
 			if( numIndices < 3 )
 				return;
 			size_t outIdx = 0;
 			for( size_t i = 0; i < numIndices - 2; ++i ) {
-				target[outIdx++] = source[0];
-				target[outIdx++] = source[i+1];
-				target[outIdx++] = source[i+2];
+				target[outIdx++] = static_cast<T>( source[0] );
+				target[outIdx++] = static_cast<T>( source[i+1] );
+				target[outIdx++] = static_cast<T>( source[i+2] );
 			}
 		}
 		break;
@@ -546,7 +566,7 @@ void Target::copyIndexData( const uint32_t *source, size_t numIndices, uint32_t 
 void Target::copyIndexData( const uint32_t *source, size_t numIndices, uint16_t *target )
 {
 	for( size_t v = 0; v < numIndices; ++v )
-		target[v] = source[v];
+		target[v] = static_cast<uint16_t>(source[v]);
 }
 
 uint8_t calcIndicesRequiredBytes( size_t numIndices )
@@ -585,11 +605,6 @@ Primitive Target::determineCombinedPrimitive( Primitive a, Primitive b )
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Rect
-//float Rect::sPositions[4*2] = { 0.5f,-0.5f,	-0.5f,-0.5f,	0.5f,0.5f,	-0.5f,0.5f };
-//float Rect::sColors[4*3] = { 1, 0, 1,	0, 0, 1,	1, 1, 1,	0, 1, 1 };
-//float Rect::sTexCoords[4*2] = { 1, 1,		0, 1,		1, 0,		0, 0 };
-const float Rect::sNormals[4*3] = {0, 0, 1,	0, 0, 1,	0, 0, 1,	0, 0, 1 };
-const float Rect::sTangents[4*3] = {0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0 };
 
 Rect::Rect()
 	: mHasColors( false )
@@ -639,18 +654,26 @@ Rect& Rect::texCoords( const vec2 &upperLeft, const vec2 &upperRight, const vec2
 	return *this;
 }
 
+//float Rect::sPositions[4*2] = { 0.5f,-0.5f,	-0.5f,-0.5f,	0.5f,0.5f,	-0.5f,0.5f };
+//float Rect::sColors[4*3] = { 1, 0, 1,	0, 0, 1,	1, 1, 1,	0, 1, 1 };
+//float Rect::sTexCoords[4*2] = { 1, 1,		0, 1,		1, 0,		0, 0 };
+namespace {
+	const float sRectNormals[4*3] = {0, 0, 1,	0, 0, 1,	0, 0, 1,	0, 0, 1 };
+	const float sRectTangents[4*3] = {0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0,	0.7071067f, 0.7071067f, 0 };
+}
+
 void Rect::loadInto( Target *target, const AttribSet &requestedAttribs ) const
 {
 	if( requestedAttribs.count( Attrib::POSITION ) )
 		target->copyAttrib( Attrib::POSITION, 2, 0, (const float*)mPositions.data(), 4 );
 	if( requestedAttribs.count( Attrib::NORMAL ) )
-		target->copyAttrib( Attrib::NORMAL, 3, 0, sNormals, 4 );
+		target->copyAttrib( Attrib::NORMAL, 3, 0, sRectNormals, 4 );
 	if( requestedAttribs.count( Attrib::TEX_COORD_0 ) )
 		target->copyAttrib( Attrib::TEX_COORD_0, 2, 0, (const float*)mTexCoords.data(), 4 );
 	if( requestedAttribs.count( Attrib::COLOR ) )
 		target->copyAttrib( Attrib::COLOR, 4, 0, (const float*)mColors.data(), 4 );
 	if( requestedAttribs.count( Attrib::TANGENT ) )
-		target->copyAttrib( Attrib::TANGENT, 3, 0, sTangents, 4 );
+		target->copyAttrib( Attrib::TANGENT, 3, 0, sRectTangents, 4 );
 }
 
 uint8_t	Rect::getAttribDims( Attrib attr ) const
@@ -826,7 +849,6 @@ void RoundedRect::loadInto( cinder::geom::Target *target, const AttribSet &reque
 		float angle = (float)(corner * M_PI / 2.0f);
 		vec2 cornerCenter( cornerCenterVerts[corner] );
 		vec2 cornerTexCoord( cornerCenterTexCoords[corner] );
-		vec4 cornerColor( mColors[corner] );
 		for( int s = 0; s <= mSubdivisions; s++ ) {
 			auto cosVal = math<float>::cos( angle );
 			auto sinVal = math<float>::sin( angle );
@@ -3504,13 +3526,13 @@ void ExtrudeSpline::loadInto( Target *target, const AttribSet &requestedAttribs 
 // BSpline
 template<int D, typename T>
 BSpline::BSpline( const ci::BSpline<D,T> &spline, int subdivisions )
-	: mPositionDims( D )
+	: mPositionDims( static_cast<uint8_t>( D ) )
 {
 	CI_ASSERT( D >= 2 && D <= 4 );
-	
+
 	subdivisions = std::max( 2, subdivisions );
 	mNumVertices = subdivisions;
-	
+
 	mPositions.reserve( mNumVertices * D );
 	mNormals.reserve( mNumVertices );
 
@@ -3577,8 +3599,8 @@ void BSpline::loadInto( Target *target, const AttribSet & /*requestedAttribs*/ )
 	target->copyAttrib( Attrib::NORMAL, 3, 0, (const float*)mNormals.data(), mNumVertices );
 }
 
-template BSpline::BSpline( const ci::BSpline<2,float>&, int );
-template BSpline::BSpline( const ci::BSpline<3, float>&, int );
+template CI_API BSpline::BSpline( const ci::BSpline<2, float>&, int );
+template CI_API BSpline::BSpline( const ci::BSpline<3, float>&, int );
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // WireCapsule
@@ -3897,6 +3919,14 @@ void WireCube::loadInto( Target *target, const AttribSet & /*requestedAttribs*/ 
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // WireCylinder
+WireCylinder& WireCylinder::set( const vec3 &from, const vec3 &to )
+{
+	const vec3 axis = ( to - from );
+	mHeight = length( axis );
+	mDirection = normalize( axis );
+	mOrigin = from;
+	return *this;
+}
 size_t WireCylinder::getNumVertices() const
 {
 	int subdivisionAxis = ( mSubdivisionsAxis > 1 ) ? mSubdivisionsAxis : 0;
@@ -4097,18 +4127,15 @@ size_t WireSphere::getNumVertices() const
 
 void WireSphere::loadInto( Target *target, const AttribSet & /*requestedAttribs*/ ) const
 {
-	size_t numVertices = getNumVertices();
-
-	std::vector<vec3> positions;
-	positions.resize( numVertices );
+	std::vector<vec3> positions( getNumVertices() );
 
 	vec3 *ptr = positions.data();
 
-	float angle = float( 2.0 * M_PI / mNumSegments );
+	const float angle = float( 2.0 * M_PI / mNumSegments );
 	for( int i = 1; i < mSubdivisionsHeight; ++i ) {
-		float f = float( i ) / mSubdivisionsHeight * 2.0f - 1.0f;
-		float radius = mRadius * glm::cos( f * float( M_PI / 2.0 ) );
-		vec3 center = mCenter + mRadius * vec3( 0, glm::sin( f * float( M_PI / 2.0 ) ), 0 );
+		const float f = float( i ) / mSubdivisionsHeight * 2.0f - 1.0f;
+		const float radius = mRadius * glm::cos( f * float( M_PI / 2.0 ) );
+		const vec3 center = mCenter + mRadius * vec3( 0, glm::sin( f * float( M_PI / 2.0 ) ), 0 );
 
 		*ptr++ = center + vec3( 0, 0, 1 ) * radius;
 		for( int j = 1; j < mNumSegments; ++j ) {
@@ -4120,14 +4147,14 @@ void WireSphere::loadInto( Target *target, const AttribSet & /*requestedAttribs*
 	}
 
 	if( mSubdivisionsAxis > 1 ) {
-		int semidiv = ( mNumSegments + 1 ) / 2;
-		float semi = float( M_PI / semidiv );
-		float angle = float( 2.0 * M_PI / mSubdivisionsAxis );
+		const int semidiv = ( mNumSegments + 1 ) / 2;
+		const float semi = float( M_PI / semidiv );
+		const float angle_subdiv = float( 2.0 * M_PI / mSubdivisionsAxis );
 
 		for( int i = 0; i < mSubdivisionsAxis; ++i ) {
 			*ptr++ = mCenter + vec3( 0, 1, 0 ) * mRadius;
 			for( int j = 1; j < semidiv; ++j ) {
-				vec3 v = mCenter + vec3( glm::sin( j * semi ) * glm::sin( i * angle ), glm::cos( j * semi ), glm::sin( j * semi ) * glm::cos( i * angle ) ) * mRadius;
+				vec3 v = mCenter + vec3( glm::sin( j * semi ) * glm::sin( i * angle_subdiv ), glm::cos( j * semi ), glm::sin( j * semi ) * glm::cos( i * angle_subdiv ) ) * mRadius;
 				*ptr++ = v;
 				*ptr++ = v;
 			}
@@ -4135,7 +4162,7 @@ void WireSphere::loadInto( Target *target, const AttribSet & /*requestedAttribs*
 		}
 	}
 
-	target->copyAttrib( Attrib::POSITION, 3, 0, (const float*) positions.data(), numVertices );
+	target->copyAttrib( Attrib::POSITION, 3, 0, (const float*) positions.data(), positions.size() );
 }
 
 
@@ -4260,7 +4287,7 @@ void VertexNormalLines::process( SourceModsContext *ctx, const AttribSet &reques
 	const vec3 *positions = reinterpret_cast<const vec3*>( ctx->getAttribData( Attrib::POSITION ) );
 	const vec3 *attrib = reinterpret_cast<const vec3*>( ctx->getAttribData( mAttrib ) );
 	const float *texCoords = nullptr;
-	size_t texCoordDims = ctx->getAttribDims( Attrib::TEX_COORD_0 );
+	auto texCoordDims = ctx->getAttribDims( Attrib::TEX_COORD_0 );
 	if( texCoordDims > 0 )
 		texCoords = reinterpret_cast<const float*>( ctx->getAttribData( Attrib::TEX_COORD_0 ) );
 
@@ -4529,7 +4556,7 @@ void Subdivide::process( SourceModsContext *ctx, const AttribSet &requestedAttri
 	ctx->processUpstream( request );
 	
 	if( ctx->getPrimitive() != Primitive::TRIANGLES ) {
-		CI_LOG_E( "geom::PhongTessellate only supports TRIANGLES primitive." );
+		CI_LOG_E( "geom::Subdivide only supports TRIANGLES primitive." );
 		return;
 	}
 
@@ -5127,9 +5154,9 @@ void SourceModsContext::clearIndices()
 ///////////////////////////////////////////////////////////////////////////////////////
 // Modifier
 
-template class AttribFn<float,float>;	template class AttribFn<float,vec2>;	template class AttribFn<float,vec3>;	template class AttribFn<float,vec4>;
-template class AttribFn<vec2,float>;	template class AttribFn<vec2,vec2>;		template class AttribFn<vec2,vec3>;		template class AttribFn<vec2,vec4>;
-template class AttribFn<vec3,float>;	template class AttribFn<vec3,vec2>;		template class AttribFn<vec3,vec3>;		template class AttribFn<vec3,vec4>;
-template class AttribFn<vec4,float>;	template class AttribFn<vec4,vec2>;		template class AttribFn<vec4,vec3>;		template class AttribFn<vec4,vec4>;
+template class CI_API AttribFn<float,float>;	template class CI_API AttribFn<float,vec2>;		template class CI_API AttribFn<float,vec3>;		template class CI_API AttribFn<float,vec4>;
+template class CI_API AttribFn<vec2,float>;		template class CI_API AttribFn<vec2,vec2>;		template class CI_API AttribFn<vec2,vec3>;		template class CI_API AttribFn<vec2,vec4>;
+template class CI_API AttribFn<vec3,float>;		template class CI_API AttribFn<vec3,vec2>;		template class CI_API AttribFn<vec3,vec3>;		template class CI_API AttribFn<vec3,vec4>;
+template class CI_API AttribFn<vec4,float>;		template class CI_API AttribFn<vec4,vec2>;		template class CI_API AttribFn<vec4,vec3>;		template class CI_API AttribFn<vec4,vec4>;
 
 } } // namespace cinder::geom

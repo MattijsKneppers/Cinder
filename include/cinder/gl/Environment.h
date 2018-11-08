@@ -55,6 +55,8 @@
 		typedef void*		EGLDisplay;
 		typedef void*		EGLSurface;
 		typedef void*		EGLConfig;	
+	#elif defined( CINDER_HEADLESS_GL_OSMESA )
+		typedef struct osmesa_context	*OSMesaContext;
 	#else
 		typedef struct GLFWwindow 	GLFWwindow;
 	#endif
@@ -68,7 +70,7 @@ typedef std::shared_ptr<GlslProg>		GlslProgRef;
 class Context;
 typedef std::shared_ptr<Context>		ContextRef;
 
-class Environment {
+class CI_API Environment {
   public:
 	virtual void			initializeFunctionPointers() = 0;
 	
@@ -138,7 +140,7 @@ struct PlatformDataAngle : public Context::PlatformData {
 };
 
 #elif defined( CINDER_MSW ) // normal MSW desktop GL
-struct PlatformDataMsw : public Context::PlatformData {
+struct CI_API PlatformDataMsw : public Context::PlatformData {
 	PlatformDataMsw( HGLRC glrc, HDC dc )
 		: mGlrc( glrc ), mDc( dc )
 	{}
@@ -172,6 +174,16 @@ struct PlatformDataAndroid : public Context::PlatformData {
 		EGLSurface		mSurface;
 		EGLConfig		mConfig;
 	};
+	#elif defined( CINDER_HEADLESS_GL_OSMESA )
+		struct PlatformDataLinux : public Context::PlatformData {
+			PlatformDataLinux( OSMesaContext context, const std::vector<unsigned char>& buffer, int bufferWidth, int bufferHeight )
+				: mContext( context ), mBuffer( buffer ), mBufferWidth( bufferWidth ), mBufferHeight( bufferHeight )
+			{}
+			OSMesaContext			mContext;
+			std::vector<unsigned char>	mBuffer;
+			int				mBufferWidth{ 0 };
+			int				mBufferHeight{ 0 };
+		};
   #else
 	struct PlatformDataLinux : public Context::PlatformData {
 		PlatformDataLinux( GLFWwindow *context )
