@@ -100,7 +100,7 @@ class CI_API ShaderPreprocessor {
 	std::string		readStream( std::istream &stream, const fs::path &sourcePath, int lineNumberStart, int versionNumber, std::set<fs::path> &includeTree );
 
     std::string     parseTopLevel( const std::string &source, int lineNumberStart, int versionNumber, std::map<std::string, std::string> includes );
-	std::string     parseRecursive( const std::string &source, std::map<std::string, std::string> includes );
+	std::string     parseRecursive( const std::string &source, int versionNumber, std::map<std::string, std::string> includes );
     std::string     readStream( std::istream &stream, int lineNumberStart, int versionNumber, std::map<std::string, std::string> includes );
     
 	std::string		getLineDirective( const fs::path &sourcePath, int lineNumber, int sourceStringNumber, int versionNumber ) const;

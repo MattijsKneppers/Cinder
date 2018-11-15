@@ -371,33 +371,6 @@ string ShaderPreprocessor::parseTopLevel( const string &source, int lineNumberSt
     return readStream( input, lineNumberStart, versionNumber, includes );
 }
 
-string ShaderPreprocessor::parseRecursive( const string &source, map<string, string> includes )
-{
-	stringstream output;
-	istringstream input( source );
-	
-	// go through each line and process includes
-	string line;
-	
-	size_t lineNumber = 1;
-	
-	while( getline( input, line ) ) {
-		std::string includeFilePath;
-		if( findIncludeStatement( line, &includeFilePath ) ) {
-			if (includes.count(includeFilePath) == 0) throw ShaderPreprocessorExc( "Failed to find source in provided includes map for include: " + includeFilePath );
-			output << parseRecursive( includes[includeFilePath], includes );
-			output << "#line " << lineNumber << endl;
-		}
-		else
-			output << line;
-		
-		output << endl;
-		lineNumber++;
-	}
-	
-	return output.str();
-}
-	
 std::string ShaderPreprocessor::readStream( std::istream &input, int lineNumberStart, int versionNumber, map<string, string> includes )
 {
 	// go through each line and process includes
@@ -408,18 +381,48 @@ std::string ShaderPreprocessor::readStream( std::istream &input, int lineNumberS
 	while( getline( input, line ) ) {
 		std::string includeFilePath;
 		if( findIncludeStatement( line, &includeFilePath ) ) {
+			if (includes.count(includeFilePath) == 0) throw ShaderPreprocessorExc( "Failed to find source in provided includes map for include: " + includeFilePath );
 			int numIncludesBefore = 0;
-			output << parseRecursive( includeFilePath, includes );
-			output << getLineDirective( "<file not form disk>", lineNumber, numIncludesBefore, versionNumber );
+			output << parseRecursive( includes[includeFilePath], versionNumber, includes );
+			output << getLineDirective( "<file not from disk>", lineNumber, numIncludesBefore, versionNumber );
 		}
 		else
-			output << line << "\n";
+			output << line << endl;
 
+		lineNumber++;
+	}
+	
+	return output.str();
+}
+	
+string ShaderPreprocessor::parseRecursive( const string &source, int versionNumber, map<string, string> includes )
+{
+	stringstream output;
+	istringstream input( source );
+	
+	// go through each line and process includes
+	string line;
+	
+	int lineNumber = 1;
+	
+	while( getline( input, line ) ) {
+		std::string includeFilePath;
+		if( findIncludeStatement( line, &includeFilePath ) ) {
+			if (includes.count(includeFilePath) == 0) throw ShaderPreprocessorExc( "Failed to find source in provided includes map for include: " + includeFilePath );
+			istringstream includeStream( includes[includeFilePath] );
+			output << readStream( includeStream, lineNumber, versionNumber, includes );
+			output << "#line " << lineNumber << endl;
+		}
+		else
+			output << line;
+		
+		output << endl;
 		lineNumber++;
 	}
 
 	return output.str();
 }
+
 
 std::string ShaderPreprocessor::getLineDirective( const fs::path &sourcePath, int lineNumber, int sourceStringNumber, int versionNumber ) const
 {
