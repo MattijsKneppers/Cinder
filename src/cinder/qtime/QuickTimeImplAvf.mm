@@ -316,7 +316,7 @@ bool MovieBase::seekToTime( float seconds )
 		return false;
 	}
 	
-	CMTime seek_time = CMTimeMakeWithSeconds(seconds, 1000);
+	CMTime seek_time = CMTimeMakeWithSeconds(seconds, [mPlayer currentTime].timescale);
 	[mPlayer seekToTime:seek_time toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
 		mSignalSeekDone.emit(finished);
 	}];
