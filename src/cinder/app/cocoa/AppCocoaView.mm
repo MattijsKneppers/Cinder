@@ -541,6 +541,10 @@ void AppCocoaView::setupCinderView( CinderViewMac *cinderView )
 {
 	[mImpl setupCinderView:cinderView renderer:getDefaultRenderer()];
 }
+	
+void AppCocoaView::setupCinderView(CinderViewMac *cinderView, RendererRef renderer) {
+	[mImpl setupCinderView:cinderView renderer:renderer];
+}
 
 void AppCocoaView::launch()
 {
