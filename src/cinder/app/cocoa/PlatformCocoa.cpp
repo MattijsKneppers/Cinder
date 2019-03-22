@@ -225,9 +225,9 @@ fs::path PlatformCocoa::getOpenFilePath( const fs::path &initialPath, const vect
 	NSInteger resultCode = [cinderOpen runModal];
 	setInsideModalLoop( false );
 	// Due to bug #960: https://github.com/cinder/Cinder/issues/960 We need to force the background window
-	// to be actually in the background when we're fullscreen. Was true of 10.9 and 10.10
-	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
-		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
+//	// to be actually in the background when we're fullscreen. Was true of 10.9 and 10.10
+//	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
+//		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
 
 	if( resultCode == NSFileHandlingPanelOKButton ) {
 		NSString *result = [[[cinderOpen URLs] firstObject] path];
@@ -259,8 +259,8 @@ fs::path PlatformCocoa::getFolderPath( const fs::path &initialPath )
 	setInsideModalLoop( false );
 	// Due to bug #960: https://github.com/cinder/Cinder/issues/960 We need to force the background window
 	// to be actually in the background when we're fullscreen. Was true of 10.9 and 10.10
-	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
-		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
+//	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
+//		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
 
 	if( resultCode == NSFileHandlingPanelOKButton ) {
 		NSString *result = [[[cinderOpen URLs] firstObject] path];
@@ -315,8 +315,8 @@ fs::path PlatformCocoa::getSaveFilePath( const fs::path &initialPath, const vect
 	setInsideModalLoop( false );
 	// Due to bug #960: https://github.com/cinder/Cinder/issues/960 We need to force the background window
 	// to be actually in the background when we're fullscreen. Was true of 10.9 and 10.10
-	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
-		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
+//	if( app::AppBase::get() && app::getWindow() && app::getWindow()->isFullScreen() )
+//		[[[NSApplication sharedApplication] mainWindow] orderBack:nil];
 	
 	if( resultCode == NSFileHandlingPanelOKButton ) {
 		return fs::path( [[[cinderSave URL] path] UTF8String] );
@@ -375,8 +375,8 @@ void PlatformCocoa::addDisplay( const DisplayRef &display )
 {
 	mDisplays.push_back( display );
 
-	if( app::AppBase::get() )
-		app::AppBase::get()->emitDisplayConnected( display );
+//	if( app::AppBase::get() )
+//		app::AppBase::get()->emitDisplayConnected( display );
 }
 
 void PlatformCocoa::removeDisplay( const DisplayRef &display )
@@ -384,8 +384,8 @@ void PlatformCocoa::removeDisplay( const DisplayRef &display )
 	DisplayRef displayCopy = display;
 	mDisplays.erase( std::remove( mDisplays.begin(), mDisplays.end(), displayCopy ), mDisplays.end() );
 	
-	if( app::AppBase::get() )
-		app::AppBase::get()->emitDisplayDisconnected( displayCopy );
+//	if( app::AppBase::get() )
+//		app::AppBase::get()->emitDisplayDisconnected( displayCopy );
 }
 
 } // namespace app
@@ -510,10 +510,10 @@ void DisplayMac::displayReconfiguredCallback( CGDirectDisplayID displayId, CGDis
 				newArea = true;
 			}
 
-			if( newMainDisplay || newArea ) {
-				if( app::AppBase::get() )
-					app::AppBase::get()->emitDisplayChanged( display );
-			}
+//			if( newMainDisplay || newArea ) {
+//				if( app::AppBase::get() )
+//					app::AppBase::get()->emitDisplayChanged( display );
+//			}
 		}
 		else
 			CI_LOG_W( "Received moved from CGDisplayRegisterReconfigurationCallback() on unknown display" );			
@@ -606,8 +606,8 @@ const std::vector<DisplayRef>& app::PlatformCocoa::getDisplays()
 			mDisplaysInitialized = true;				
 		}
 		else {
-			if( ! cinder::app::AppBase::get() )
-				CI_LOG_E( "getDisplays() fails on iOS until application is instantiated." );
+			//if( ! cinder::app::AppBase::get() )
+			//	CI_LOG_E( "getDisplays() fails on iOS until application is instantiated." );
 
 			// when [UIScreen screens] is called before the app is initialized it returns an empty array
 			// We need to work around this by not marking mDisplaysInitialized so that a future call will reevaluate
