@@ -547,8 +547,6 @@ inline	Area	toPoints( const Area &a ) { return getWindow()->toPoints( a ); }
 //! Returns a Rectf mapped from pixels to points for the current Window
 inline	Rectf	toPoints( const Rectf &a ) { return getWindow()->toPoints( a ); }
 
-//! Returns the number seconds which have elapsed since the active App launched.
-inline double	getElapsedSeconds() { return AppBase::get()->getElapsedSeconds(); }
 //! Returns the number of animation frames which have elapsed since the active App launched.
 inline uint32_t	getElapsedFrames()	{ return AppBase::get()->getElapsedFrames(); }
 //! Returns \c true if the calling thread is the Application's main thread (the thread running the main function), false otherwise.

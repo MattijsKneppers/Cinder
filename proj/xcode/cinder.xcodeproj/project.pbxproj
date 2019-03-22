@@ -10,7 +10,6 @@
 		0003F3D81992D64100647C8B /* Batch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3BE1992D64100647C8B /* Batch.cpp */; };
 		0003F3DB1992D64100647C8B /* BufferObj.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3BF1992D64100647C8B /* BufferObj.cpp */; };
 		0003F3DE1992D64100647C8B /* BufferTexture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3C01992D64100647C8B /* BufferTexture.cpp */; };
-		0003F3E41992D64100647C8B /* Context.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3C21992D64100647C8B /* Context.cpp */; };
 		0003F3E71992D64100647C8B /* Environment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3C31992D64100647C8B /* Environment.cpp */; };
 		0003F3EA1992D64100647C8B /* EnvironmentCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3C41992D64100647C8B /* EnvironmentCore.cpp */; };
 		0003F3F01992D64100647C8B /* Fbo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0003F3C61992D64100647C8B /* Fbo.cpp */; };
@@ -97,7 +96,6 @@
 		008FCFF31A7497C600A86EC4 /* jsoncpp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 008FCFF21A7497C600A86EC4 /* jsoncpp.cpp */; };
 		0091D8F10E81B9110029341E /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0091D8F00E81B9110029341E /* OpenGL.framework */; };
 		0094F3460F6A120800EBED1B /* ScreenSaver.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0094F3450F6A120800EBED1B /* ScreenSaver.framework */; };
-		0099871A0F79D0750042F211 /* CinderCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 009987190F79D0750042F211 /* CinderCocoa.mm */; };
 		009EE4720F7A9FAC00F17CB1 /* PolyLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 009EE4710F7A9FAC00F17CB1 /* PolyLine.cpp */; };
 		009EE56D0F803F5600F17CB1 /* BandedMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 009EE56A0F803F5600F17CB1 /* BandedMatrix.cpp */; };
 		009EE56E0F803F5600F17CB1 /* BSplineFit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 009EE56B0F803F5600F17CB1 /* BSplineFit.cpp */; };
@@ -197,12 +195,7 @@
 		116C06271ABD2C06004D8297 /* scoped.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 116C06221ABD2C06004D8297 /* scoped.cpp */; };
 		116C062A1ABD2C06004D8297 /* wrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 116C06231ABD2C06004D8297 /* wrapper.cpp */; };
 		1181F7C81A7F8792001BBFA2 /* AppBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1181F7C71A7F8792001BBFA2 /* AppBase.cpp */; };
-		118CA4151A9427F700841458 /* AppMac.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 118CA4081A9427F700841458 /* AppMac.cpp */; };
-		118CA41B1A9427F700841458 /* AppCocoaView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA40A1A9427F700841458 /* AppCocoaView.mm */; };
-		118CA41E1A9427F700841458 /* AppImplMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA40B1A9427F700841458 /* AppImplMac.mm */; };
-		118CA4211A9427F700841458 /* RendererImplGlMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA40C1A9427F700841458 /* RendererImplGlMac.mm */; };
 		118CA4241A9427F700841458 /* RendererImpl2dMacQuartz.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA40D1A9427F700841458 /* RendererImpl2dMacQuartz.mm */; };
-		118CA4331A9427F700841458 /* CinderViewMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA4121A9427F700841458 /* CinderViewMac.mm */; };
 		118CA4391A9427F700841458 /* PlatformCocoa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 118CA4141A9427F700841458 /* PlatformCocoa.cpp */; };
 		11A38FB31E7769CE008C452D /* FileWatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 11A38FB21E7769CE008C452D /* FileWatcher.cpp */; };
 		11C6F75A1AA391E50001FA5C /* ShaderPreprocessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 11C6F7591AA391E50001FA5C /* ShaderPreprocessor.cpp */; };
@@ -278,6 +271,8 @@
 		C7BA40890FA8C13A00AADC07 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA40880FA8C13A00AADC07 /* AudioToolbox.framework */; };
 		C7BA408B0FA8C13A00AADC07 /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA408A0FA8C13A00AADC07 /* AudioUnit.framework */; };
 		C7BA408D0FA8C13A00AADC07 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7BA408C0FA8C13A00AADC07 /* CoreAudio.framework */; };
+		CBE6C4862245504800813A58 /* CinderCocoa.mm in Sources */ = {isa = PBXBuildFile; fileRef = 009987190F79D0750042F211 /* CinderCocoa.mm */; };
+		CBE6C4872245507700813A58 /* RendererImplGlMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 118CA40C1A9427F700841458 /* RendererImplGlMac.mm */; };
 		D2AAC088055469A000DB518D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7B1FEA5585E11CA2CBB /* Cocoa.framework */; };
 		D8A5A81A19BFDE8700811132 /* CaptureImplAvFoundation.mm in Sources */ = {isa = PBXBuildFile; fileRef = C7FA5FC112124A790065683B /* CaptureImplAvFoundation.mm */; };
 		EAC3D1AD1011F3AC00FFBC9E /* Serial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EAC3D1AB1011F3AC00FFBC9E /* Serial.cpp */; };
@@ -3637,7 +3632,7 @@
 		0867D690FE84028FC02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1000;
+				LastUpgradeCheck = 1010;
 			};
 			buildConfigurationList = 1DEB922208733DC00010E9CD /* Build configuration list for PBXProject "cinder" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -3751,6 +3746,7 @@
 				B3EA40D71DD0F09C00E34348 /* ftgzip.c in Sources */,
 				00241ABF0E830DD5004D34EB /* Camera.cpp in Sources */,
 				118CA4391A9427F700841458 /* PlatformCocoa.cpp in Sources */,
+				CBE6C4872245507700813A58 /* RendererImplGlMac.mm in Sources */,
 				00241AC00E830DD5004D34EB /* Matrix.cpp in Sources */,
 				B3EA40501DD0EF1B00E34348 /* pfr.c in Sources */,
 				0003F4991995DEAF00647C8B /* TwOpenGL.cpp in Sources */,
@@ -3791,12 +3787,10 @@
 				B3EA40BB1DD0F00900E34348 /* fttype1.c in Sources */,
 				006D705919942BF5008149E2 /* QuickTimeImplLegacy.cpp in Sources */,
 				0003F49D1995DEF000647C8B /* LoadOGL.cpp in Sources */,
-				118CA41E1A9427F700841458 /* AppImplMac.mm in Sources */,
 				B3EA40F51DD0F12200E34348 /* psnames.c in Sources */,
 				0003F3EA1992D64100647C8B /* EnvironmentCore.cpp in Sources */,
 				111A5EA8191F703D005C3166 /* bitrate.c in Sources */,
 				111A5EE4191F703D005C3166 /* window.c in Sources */,
-				0099871A0F79D0750042F211 /* CinderCocoa.mm in Sources */,
 				111A5EED191F703D005C3166 /* r8bbase.cpp in Sources */,
 				111A5EC1191F703D005C3166 /* mdct.c in Sources */,
 				009EE4720F7A9FAC00F17CB1 /* PolyLine.cpp in Sources */,
@@ -3804,7 +3798,6 @@
 				B3EA40B81DD0F00900E34348 /* ftsystem.c in Sources */,
 				111A5EE3191F703D005C3166 /* vorbisfile.c in Sources */,
 				0003F41D1992D64100647C8B /* VaoImplSoftware.cpp in Sources */,
-				0003F3E41992D64100647C8B /* Context.cpp in Sources */,
 				009EE56D0F803F5600F17CB1 /* BandedMatrix.cpp in Sources */,
 				009EE56E0F803F5600F17CB1 /* BSplineFit.cpp in Sources */,
 				0003F4081992D64100647C8B /* TextureFormatParsers.cpp in Sources */,
@@ -3838,7 +3831,6 @@
 				111A5FD7191F72AE005C3166 /* FilterNode.cpp in Sources */,
 				B3EA40461DD0EEF700E34348 /* cff.c in Sources */,
 				111A5FC5191F72AE005C3166 /* Converter.cpp in Sources */,
-				118CA4331A9427F700841458 /* CinderViewMac.mm in Sources */,
 				0049C1B71010E5B10015B4B9 /* Renderer.cpp in Sources */,
 				006D705619942BF5008149E2 /* QuickTimeImplAvf.mm in Sources */,
 				11C6F75A1AA391E50001FA5C /* ShaderPreprocessor.cpp in Sources */,
@@ -3963,7 +3955,6 @@
 				B3EA409D1DD0F00900E34348 /* ftgxval.c in Sources */,
 				006D704A19942BF5008149E2 /* AvfUtils.mm in Sources */,
 				0003F3FC1992D64100647C8B /* Shader.cpp in Sources */,
-				118CA4151A9427F700841458 /* AppMac.cpp in Sources */,
 				111A5FAA191F72AE005C3166 /* CinderCoreAudio.cpp in Sources */,
 				111A5EB5191F703D005C3166 /* floor1.c in Sources */,
 				0003F3F61992D64100647C8B /* GlslProg.cpp in Sources */,
@@ -3977,7 +3968,6 @@
 				B3EA40FA1DD0F13C00E34348 /* type1cid.c in Sources */,
 				11A38FB31E7769CE008C452D /* FileWatcher.cpp in Sources */,
 				111A5EE2191F703D005C3166 /* vorbisenc.c in Sources */,
-				118CA4211A9427F700841458 /* RendererImplGlMac.mm in Sources */,
 				0003F3DB1992D64100647C8B /* BufferObj.cpp in Sources */,
 				B3EA40971DD0F00900E34348 /* ftgasp.c in Sources */,
 				B3EA40911DD0F00900E34348 /* ftdebug.c in Sources */,
@@ -4000,7 +3990,6 @@
 				B3EA40881DD0F00900E34348 /* ftbdf.c in Sources */,
 				007A7B13158D098D00BEAD18 /* Window.cpp in Sources */,
 				B3EA40851DD0F00900E34348 /* ftbbox.c in Sources */,
-				118CA41B1A9427F700841458 /* AppCocoaView.mm in Sources */,
 				0003F4051992D64100647C8B /* TextureFont.cpp in Sources */,
 				111A600A191F72AE005C3166 /* Target.cpp in Sources */,
 				111A5EDA191F703D005C3166 /* registry.c in Sources */,
@@ -4008,6 +3997,7 @@
 				B322C4761DC7DC7100D2E661 /* infback.c in Sources */,
 				111A5FEF191F72AE005C3166 /* Node.cpp in Sources */,
 				111A5FFB191F72AE005C3166 /* Param.cpp in Sources */,
+				CBE6C4862245504800813A58 /* CinderCocoa.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
